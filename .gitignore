@@ -26,4 +26,4 @@ cache/
 *.tar.gz
 *.zip
 *.exe
-
+*.Identifier
