@@ -462,13 +462,16 @@ end
 -- =============================
 -- Reutiliza la lógica de gemini-cli pero apunta a tu instancia local de Ollama
 
+-- Modelo global de Ollama
+vim.g.ollama_model = vim.g.ollama_model or 'deepseek-r1'
+
 local function open_ollama(prompt, input_text)
-  local model = "deepseek-r1" -- Puedes cambiarlo a llama3, mistral, etc.
+  local model = vim.g.ollama_model or "deepseek-r1"
   vim.cmd("vsplit | vertical resize 50")
-  
+
   -- Iniciamos el terminal con ollama
   vim.cmd("term ollama run " .. model)
-  
+
   -- Preparamos el envío del prompt + el texto seleccionado
   local final_prompt = prompt
   if input_text and input_text ~= "" then
@@ -481,7 +484,7 @@ local function open_ollama(prompt, input_text)
       vim.api.nvim_chan_send(vim.b.terminal_job_id, final_prompt .. "\n")
     end
   end, 800) -- Delay de seguridad para que cargue el modelo
-  
+
   vim.cmd("startinsert")
 end
 
@@ -493,6 +496,7 @@ local function show_ollama_menu(selected_text)
     "♻️ [Local] Refactorizar",
     "⚡ [Local] Optimizar",
     "💬 [Local] Chat Libre",
+    "⚙️ [Local] Cambiar modelo (" .. (vim.g.ollama_model or "default") .. ")",
   }
 
   vim.ui.select(options, {
@@ -509,7 +513,14 @@ local function show_ollama_menu(selected_text)
       "", -- Chat Libre
     }
 
-    if idx == 6 then
+    if idx == 7 then -- Cambiar modelo
+      vim.ui.input({ prompt = "Nuevo modelo (ej: llama3, mistral): " }, function(input)
+        if input and input ~= "" then
+          vim.g.ollama_model = input
+          vim.notify("✅ Modelo cambiado a: " .. input, vim.log.levels.INFO)
+        end
+      end)
+    elseif idx == 6 then -- Chat Libre
       vim.ui.input({ prompt = "Ollama Prompt: " }, function(input)
         if input and input ~= "" then open_ollama(input, selected_text) end
       end)
