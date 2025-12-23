@@ -482,13 +482,56 @@ local function save_ollama_model(model)
   vim.fn.writefile({ model }, config_file)
 end
 
+-- Helper para buscar el comando de ollama (WSL/Windows/Linux)
+local function get_ollama_cmd()
+  -- 0. Override manual (si el usuario lo define en su config)
+  if vim.g.ollama_cmd_custom then
+    return vim.g.ollama_cmd_custom
+  end
+
+  -- 1. Intentar encontrar el ejecutable nativo (usamos exepath para la ruta completa)
+  if vim.fn.executable("ollama") == 1 then
+    return vim.fn.exepath("ollama")
+  end
+
+  -- 2. En Windows, intentar encontrar ollama.exe explícitamente
+  if vim.fn.executable("ollama.exe") == 1 then
+    return vim.fn.exepath("ollama.exe")
+  end
+
+  -- 3. Fallback: Si estamos en Windows y no hay ollama nativo, intentar usar WSL
+  -- IMPORTANTE: Usamos login shell (-l) para cargar el PATH del usuario
+  if vim.fn.has("win32") == 1 or vim.fn.has("win64") == 1 then
+    if vim.fn.executable("wsl") == 1 then
+      return "wsl $SHELL -lic"
+    end
+  end
+
+  return nil
+end
+
 -- Cargar modelo al iniciar
 vim.g.ollama_model = load_ollama_model()
 
 local function open_ollama(prompt, input_text)
+  local cmd_exec = get_ollama_cmd()
+  if not cmd_exec then
+    vim.notify("❌ Ollama no encontrado. Asegúrate de tenerlo instalado y en tu PATH.", vim.log.levels.ERROR)
+    return
+  end
+
   local model = vim.g.ollama_model
   vim.cmd("vsplit | vertical resize 50")
-  vim.cmd("term ollama run " .. model)
+
+  -- Si usamos WSL wrapper, necesitamos quotear el comando completo
+  local full_cmd
+  if cmd_exec:match("^wsl.*-lic$") then
+    full_cmd = cmd_exec .. " 'ollama run " .. model .. "'"
+  else
+    full_cmd = cmd_exec .. " run " .. model
+  end
+
+  vim.cmd("term " .. full_cmd)
 
   local final_prompt = prompt
   if input_text and input_text ~= "" then
@@ -506,8 +549,23 @@ end
 
 -- 🆕 Función para listar modelos
 local function show_ollama_list()
+  local cmd_exec = get_ollama_cmd()
+  if not cmd_exec then
+    vim.notify("❌ Ollama no encontrado.", vim.log.levels.ERROR)
+    return
+  end
+
   vim.cmd("split")
-  vim.cmd("term ollama list")
+
+  -- Si usamos WSL wrapper, necesitamos quotear el comando
+  local full_cmd
+  if cmd_exec:match("^wsl.*-lic$") then
+    full_cmd = cmd_exec .. " 'ollama list'"
+  else
+    full_cmd = cmd_exec .. " list"
+  end
+
+  vim.cmd("term " .. full_cmd)
   vim.cmd("startinsert")
 end
 
@@ -524,13 +582,30 @@ local function show_ollama_modelfile()
   local modelfile_path = modelfile_dir .. "/" .. safe_model_name .. ".modelfile"
 
   -- 1️⃣ Extraer Modelfile con sistema operativo detectado
+  -- 1️⃣ Extraer Modelfile con sistema operativo detectado y comando validado
+  local cmd_exec = get_ollama_cmd()
+  if not cmd_exec then
+    vim.notify("❌ Ollama no encontrado.", vim.log.levels.ERROR)
+    return
+  end
+
   local extract_cmd
-  if vim.fn.has("win32") == 1 or vim.fn.has("win64") == 1 then
-    -- Windows CMD
-    extract_cmd = string.format('ollama show %s --modelfile > "%s"', model, modelfile_path)
+  -- Si usamos WSL wrapper, necesitamos quotear el comando completo
+  if cmd_exec:match("^wsl.*-lic$") then
+    -- Convertir ruta de Windows a WSL (C:\... -> /mnt/c/...)
+    local wsl_path = modelfile_path:gsub("\\", "/"):gsub("^(%a):", function(drive)
+      return "/mnt/" .. drive:lower()
+    end)
+
+    extract_cmd = string.format('%s "ollama show %s --modelfile > %s"', cmd_exec, model, wsl_path)
   else
-    -- Linux/WSL/macOS
-    extract_cmd = string.format("ollama show %s --modelfile > %s", model, vim.fn.shellescape(modelfile_path))
+    if vim.fn.has("win32") == 1 or vim.fn.has("win64") == 1 then
+      -- Windows CMD
+      extract_cmd = string.format('%s show %s --modelfile > "%s"', cmd_exec, model, modelfile_path)
+    else
+      -- Linux/WSL/macOS
+      extract_cmd = string.format("%s show %s --modelfile > %s", cmd_exec, model, vim.fn.shellescape(modelfile_path))
+    end
   end
 
   vim.notify("📥 Extrayendo Modelfile de: " .. model, vim.log.levels.INFO)
@@ -559,7 +634,7 @@ local function show_ollama_modelfile()
     "# EJEMPLOS DE PERSONALIZACIÓN:",
     "# PARAMETER temperature 0.7    # Creatividad (0.0 = conservador, 1.0 = creativo)",
     "# PARAMETER num_ctx 8192        # Contexto (tokens de memoria)",
-    "# SYSTEM \"Eres un experto en...\" # Prompt del sistema",
+    '# SYSTEM "Eres un experto en..." # Prompt del sistema',
     "# ",
     "",
   }
@@ -579,7 +654,7 @@ local function show_ollama_modelfile()
         return
       end
 
-      local create_cmd = string.format("ollama create %s -f %s", input, vim.fn.shellescape(modelfile_path))
+      local create_cmd = string.format("%s create %s -f %s", cmd_exec, input, vim.fn.shellescape(modelfile_path))
       vim.notify("🔨 Creando modelo: " .. input .. " ...", vim.log.levels.INFO)
 
       -- Ejecutar en terminal
