@@ -456,6 +456,80 @@ if has_gemini then
     gemini_chat.prompt_line()
   end, { desc = "Gemini: prompt con línea actual" })
 end
+
+-- =============================
+-- [⚠ BETA⚠!] KEYMAPS OLLAMA AI (LOCAL) 🦙🤖🔥️ NO REQUIERE INTERNET
+-- =============================
+-- Reutiliza la lógica de gemini-cli pero apunta a tu instancia local de Ollama
+
+local function open_ollama(prompt, input_text)
+  local model = "deepseek-r1" -- Puedes cambiarlo a llama3, mistral, etc.
+  vim.cmd("vsplit | vertical resize 50")
+  
+  -- Iniciamos el terminal con ollama
+  vim.cmd("term ollama run " .. model)
+  
+  -- Preparamos el envío del prompt + el texto seleccionado
+  local final_prompt = prompt
+  if input_text and input_text ~= "" then
+    final_prompt = prompt .. "\n\nAnaliza este código:\n" .. input_text
+  end
+
+  -- Esperamos a que el proceso de terminal esté listo
+  vim.defer_fn(function()
+    if vim.b.terminal_job_id then
+      vim.api.nvim_chan_send(vim.b.terminal_job_id, final_prompt .. "\n")
+    end
+  end, 800) -- Delay de seguridad para que cargue el modelo
+  
+  vim.cmd("startinsert")
+end
+
+local function show_ollama_menu(selected_text)
+  local options = {
+    "🔍 [Local] Revisar código",
+    "📚 [Local] Explicar código",
+    "🐛 [Local] Debuggear error",
+    "♻️ [Local] Refactorizar",
+    "⚡ [Local] Optimizar",
+    "💬 [Local] Chat Libre",
+  }
+
+  vim.ui.select(options, {
+    prompt = " 󰊭 ~ Ollama (Deepseek R1):",
+  }, function(choice, idx)
+    if not choice then return end
+
+    local prompts = {
+      "Revisa este código y sugiere mejoras:",
+      "Explica este código paso a paso:",
+      "Debuggea este error:",
+      "Refactoriza este código:",
+      "Optimiza este código:",
+      "", -- Chat Libre
+    }
+
+    if idx == 6 then
+      vim.ui.input({ prompt = "Ollama Prompt: " }, function(input)
+        if input and input ~= "" then open_ollama(input, selected_text) end
+      end)
+    else
+      open_ollama(prompts[idx], selected_text)
+    end
+  end)
+end
+
+-- Mapeos para Ollama (Space + A + O)
+vim.keymap.set("n", "<leader>ao", function()
+  show_ollama_menu(nil)
+end, { desc = "🦙 Abrir Ollama (Deepseek R1)" })
+
+vim.keymap.set("v", "<leader>ao", function()
+  vim.cmd('normal! "+y')
+  local selected_text = vim.fn.getreg('"')
+  show_ollama_menu(selected_text)
+end, { desc = "🦙 Enviar selección a Ollama" })
+
 -- =============================
 -- -- Solo en Arhcivos.MD | MARKDown (Gentleman config) - {no funciona bien}
 -- =============================
