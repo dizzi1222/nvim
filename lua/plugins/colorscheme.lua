@@ -69,10 +69,7 @@ return {
             { cursor = "∙", texthl = "SCCursor" },
           },
         },
-        speed = 20,
-        intervals = 15,
-        threshold = 1,
-        disable_float_win = true,
+        speed = 20, intervals = 15, threshold = 1, disable_float_win = true,
       })
     end,
   },
@@ -218,27 +215,16 @@ return {
     config = function()
       -- 🧊 CONFIGURACIÓN DE TERMINAL (Windows Terminal Blur)
       local function toggle_terminal_blur(enable_blur)
-        if vim.fn.has("win32") == 0 then
-          return
-        end -- Solo en Windows nativo
+        if vim.fn.has("win32") == 0 then return end -- Solo en Windows nativo
 
-        local settings_path =
-          "C:/Users/Diego/AppData/Local/Packages/Microsoft.WindowsTerminal_8wekyb3d8bbwe/LocalState/settings.json"
+        local settings_path = "C:/Users/Diego/AppData/Local/Packages/Microsoft.WindowsTerminal_8wekyb3d8bbwe/LocalState/settings.json"
 
         -- Script PowerShell para conmutar opacidad y acrylic
         local ps_cmd
         if enable_blur then
-          ps_cmd = string.format(
-            [[pwsh -NoProfile -Command "$c = Get-Content '%s' -Raw; $c = $c -replace '\"opacity\":\s*\d+', '\"opacity\": 1'; $c = $c -replace '\"useAcrylic\":\s*false', '\"useAcrylic\": true'; Set-Content '%s' $c"]],
-            settings_path,
-            settings_path
-          )
+          ps_cmd = string.format([[pwsh -NoProfile -Command "$c = Get-Content '%s' -Raw; $c = $c -replace '\"opacity\":\s*\d+', '\"opacity\": 1'; $c = $c -replace '\"useAcrylic\":\s*false', '\"useAcrylic\": true'; Set-Content '%s' $c"]], settings_path, settings_path)
         else
-          ps_cmd = string.format(
-            [[pwsh -NoProfile -Command "$c = Get-Content '%s' -Raw; $c = $c -replace '\"opacity\":\s*\d+', '\"opacity\": 90'; $c = $c -replace '\"useAcrylic\":\s*true', '\"useAcrylic\": false'; Set-Content '%s' $c"]],
-            settings_path,
-            settings_path
-          )
+          ps_cmd = string.format([[pwsh -NoProfile -Command "$c = Get-Content '%s' -Raw; $c = $c -replace '\"opacity\":\s*\d+', '\"opacity\": 90'; $c = $c -replace '\"useAcrylic\":\s*true', '\"useAcrylic\": false'; Set-Content '%s' $c"]], settings_path, settings_path)
         end
 
         -- Ejecutar en segundo plano para no bloquear
@@ -349,12 +335,12 @@ return {
       -- Opacidad (Neovim)
       vim.keymap.set("n", "<C-o>", toggle_background_opacity, { desc = "Toggle opacidad Neovim (50%/100%)" })
       vim.keymap.set("i", "<C-o>", toggle_background_opacity, { desc = "Toggle opacidad Neovim (50%/100%)" })
-      vim.keymap.set("n", "<leader>po", toggle_background_opacity, { desc = "Toggle opacidad Neovim" })
-      vim.keymap.set("n", "<leader>pb", toggle_windows_terminal_blur, { desc = "Toggle Blur en Windows Terminal" })
+      vim.keymap.set("n", "<leader>po", toggle_background_opacity, { desc = "Toggle Opacidad en Neovim" })
+      vim.keymap.set("n", "<leader>co", toggle_background_opacity, { desc = "Toggle Opacidad en Neovim" })
 
       -- Blur (Windows Terminal)
       vim.keymap.set("n", "<leader>cb", toggle_windows_terminal_blur, { desc = "Toggle Blur en Windows Terminal" })
-      vim.keymap.set("n", "<leader>co", toggle_background_opacity, { desc = "Toggle opacidad Neovim" })
+      vim.keymap.set("n", "<leader>pb", toggle_windows_terminal_blur, { desc = "Toggle Blur en Windows Terminal" })
 
       -- Auto-aplicar al cambiar colorscheme
       vim.api.nvim_create_autocmd("ColorScheme", {
@@ -459,3 +445,4 @@ return {
     end,
   },
 }
+
