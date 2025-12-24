@@ -162,9 +162,9 @@ local function copy_file_path()
 end
 
 -- Mapeo para Ctrl+Alt+R (como VSCode)
-vim.keymap.set("n", "<C-A-r>", copy_file_path, { desc = "Copiar ruta del archivo (VSCode style)" })
+vim.keymap.set("n", "<C-A-r>", copy_file_path, { desc = "🔎Copiar ruta del archivo (VSCode style)" })
 -- Opción A: <leader>r (Ruta)
-vim.keymap.set("n", "<leader>r", copy_file_path, { desc = "Copiar ruta del archivo (VSCode style)" })
+vim.keymap.set("n", "<leader>r", copy_file_path, { desc = "🔎Copiar ruta del archivo (VSCode style)" })
 
 -- Comando personalizado
 vim.api.nvim_create_user_command("CopyPath", copy_file_path, {})
