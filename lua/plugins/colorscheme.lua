@@ -216,70 +216,105 @@ return {
     lazy = false,
     priority = 100, -- Carga al final
     config = function()
-      -- 🧊 CONFIGURACIÓN DE TERMINAL (Windows Terminal Blur)
-
+      -- 🧊 CONFIGURACIÓN DE TERMINAL (Windows Terminal Blur) - SOLO WSL y Windows
       local function toggle_terminal_blur(enable_blur)
         -- Detectar si estamos en Windows nativo o WSL
         local is_wsl = vim.fn.filereadable("/proc/version") == 1
           and vim.fn.readfile("/proc/version")[1]:match("microsoft") ~= nil
 
-        local settings_path
-        local open_cmd
+        -- Si no es WSL ni Windows, salir (Linux vanilla)
+        if not is_wsl and vim.fn.has("win32") == 0 and vim.fn.has("win64") == 0 then
+          vim.notify("ℹ️  Windows Terminal blur solo disponible en Windows/WSL", vim.log.levels.INFO)
+          return
+        end
+
+        -- Rutas
+        local settings_path_wsl
+        local settings_path_win
 
         if is_wsl then
-          -- Rutas para WSL
-          settings_path =
+          -- WSL: necesitamos ambas rutas
+          settings_path_wsl =
             "/mnt/c/Users/Diego/AppData/Local/Packages/Microsoft.WindowsTerminal_8wekyb3d8bbwe/LocalState/settings.json"
-          open_cmd = string.format("notepad.exe '%s'", settings_path)
+          settings_path_win =
+            "C:\\Users\\Diego\\AppData\\Local\\Packages\\Microsoft.WindowsTerminal_8wekyb3d8bbwe\\LocalState\\settings.json"
+
+          -- Script PowerShell para WSL
+          local ps_cmd
+          if enable_blur then
+            ps_cmd = string.format(
+              [[pwsh.exe -NoProfile -Command "
+            \$p = '%s';
+            \$c = Get-Content \$p -Raw;
+            \$c = \$c -replace '\"opacity\"\s*:\s*\d+', '\"opacity\": 1';
+            \$c = \$c -replace '\"useAcrylic\"\s*:\s*false', '\"useAcrylic\": true';
+            Set-Content \$p \$c;
+            Write-Host '✅ Blur ACTIVADO (WSL)';
+            
+            # Forzar reload abriendo archivo
+            Start-Process explorer.exe -ArgumentList \$p -WindowStyle Minimized;
+            Start-Sleep -Milliseconds 300;
+            Stop-Process -Name explorer -Force -ErrorAction SilentlyContinue;
+            "]],
+              settings_path_win
+            )
+          else
+            ps_cmd = string.format(
+              [[pwsh.exe -NoProfile -Command "
+            \$p = '%s';
+            \$c = Get-Content \$p -Raw;
+            \$c = \$c -replace '\"opacity\"\s*:\s*\d+', '\"opacity\": 90';
+            \$c = \$c -replace '\"useAcrylic\"\s*:\s*true', '\"useAcrylic\": false';
+            Set-Content \$p \$c;
+            Write-Host '🚫 Blur DESACTIVADO (WSL)';
+            
+            # Forzar reload abriendo archivo
+            Start-Process explorer.exe -ArgumentList \$p -WindowStyle Minimized;
+            Start-Sleep -Milliseconds 300;
+            Stop-Process -Name explorer -Force -ErrorAction SilentlyContinue;
+            "]],
+              settings_path_win
+            )
+          end
+
+          -- Ejecutar en WSL
+          vim.fn.jobstart(ps_cmd, { detach = true })
         else
-          -- Rutas para Windows nativo
-          settings_path =
+          -- Windows nativo (PWSH)
+          settings_path_wsl =
             "C:/Users/Diego/AppData/Local/Packages/Microsoft.WindowsTerminal_8wekyb3d8bbwe/LocalState/settings.json"
-          open_cmd = string.format('notepad "%s"', settings_path)
-        end
 
-        -- Script PowerShell para modificar el JSON
-        local ps_cmd
-        if enable_blur then
-          ps_cmd = string.format(
-            [[pwsh -NoProfile -Command "$c = Get-Content '%s' -Raw; $c = $c -replace '\"opacity\":\s*\d+', '\"opacity\": 1'; $c = $c -replace '\"useAcrylic\":\s*false', '\"useAcrylic\": true'; Set-Content '%s' $c"]],
-            settings_path,
-            settings_path
-          )
-        else
-          ps_cmd = string.format(
-            [[pwsh -NoProfile -Command "$c = Get-Content '%s' -Raw; $c = $c -replace '\"opacity\":\s*\d+', '\"opacity\": 90'; $c = $c -replace '\"useAcrylic\":\s*true', '\"useAcrylic\": false'; Set-Content '%s' $c"]],
-            settings_path,
-            settings_path
-          )
-        end
+          -- Script PowerShell para Windows nativo
+          local ps_cmd
+          if enable_blur then
+            ps_cmd = string.format(
+              [[pwsh -NoProfile -Command "$c = Get-Content '%s' -Raw; $c = $c -replace '\"opacity\":\s*\d+', '\"opacity\": 1'; $c = $c -replace '\"useAcrylic\":\s*false', '\"useAcrylic\": true'; Set-Content '%s' $c"]],
+              settings_path_wsl,
+              settings_path_wsl
+            )
+          else
+            ps_cmd = string.format(
+              [[pwsh -NoProfile -Command "$c = Get-Content '%s' -Raw; $c = $c -replace '\"opacity\":\s*\d+', '\"opacity\": 90'; $c = $c -replace '\"useAcrylic\":\s*true', '\"useAcrylic\": false'; Set-Content '%s' $c"]],
+              settings_path_wsl,
+              settings_path_wsl
+            )
+          end
 
-        -- 1. Ejecutar modificación del JSON
-        vim.fn.jobstart(ps_cmd, {
-          on_exit = function(_, exit_code)
-            if exit_code == 0 then
-              -- 2. Abrir el archivo con notepad para forzar reload de WT
-              vim.defer_fn(function()
-                if is_wsl then
-                  -- En WSL usamos cmd.exe para ejecutar notepad
-                  vim.fn.jobstart(string.format("cmd.exe /c start /min %s", open_cmd), { detach = true })
-                else
-                  -- En Windows nativo
-                  vim.fn.jobstart(string.format([[start /MIN %s]], open_cmd), { detach = true })
-                end
-
-                -- 3. Cerrar notepad automáticamente después de 1 segundo
+          -- Ejecutar en Windows nativo
+          vim.fn.jobstart(ps_cmd, {
+            on_exit = function(_, exit_code)
+              if exit_code == 0 then
+                -- Forzar reload en Windows nativo
                 vim.defer_fn(function()
-                  if is_wsl then
-                    vim.fn.jobstart("taskkill.exe /IM notepad.exe /F", { detach = true })
-                  else
-                    vim.fn.jobstart([[taskkill /IM notepad.exe /F]], { detach = true })
-                  end
-                end, 1000)
-              end, 500)
-            end
-          end,
-        })
+                  vim.fn.jobstart(string.format([[start /MIN notepad "%s"]], settings_path_wsl), { detach = true })
+                  vim.defer_fn(function()
+                    vim.fn.jobstart([[taskkill /IM notepad.exe /F > nul 2>&1]], { detach = true })
+                  end, 1000)
+                end, 300)
+              end
+            end,
+          })
+        end
       end
 
       -- Estados internos
@@ -361,8 +396,18 @@ return {
         apply_background_opacity(true)
       end
 
-      -- Función 2: Solo Blur de Windows Terminal (External)
+      -- Función 2: Solo Blur de Windows Terminal (External) - AUTO DETECTA WSL/PWSH
       local function toggle_windows_terminal_blur()
+        -- Verificar si estamos en Windows/WSL
+        local is_wsl = vim.fn.filereadable("/proc/version") == 1
+          and vim.fn.readfile("/proc/version")[1]:match("microsoft") ~= nil
+        local is_windows = vim.fn.has("win32") == 1 or vim.fn.has("win64") == 1
+
+        if not is_wsl and not is_windows then
+          vim.notify("ℹ️  Windows Terminal blur solo disponible en Windows/WSL", vim.log.levels.INFO)
+          return
+        end
+
         if vim.g.terminal_blur_enabled == 1 then
           vim.g.terminal_blur_enabled = 0
           toggle_terminal_blur(false)
@@ -381,16 +426,22 @@ return {
       vim.g.toggle_background_opacity = toggle_background_opacity
       vim.g.get_theme_background_color = get_theme_background_color
 
-      -- Atajos de teclado
-      -- Opacidad (Neovim)
+      -- Detectar plataforma
+      local is_wsl = vim.fn.filereadable("/proc/version") == 1
+        and vim.fn.readfile("/proc/version")[1]:match("microsoft") ~= nil
+      local is_windows = vim.fn.has("win32") == 1 or vim.fn.has("win64") == 1
+
+      -- Atajos de opacidad (SIEMPRE disponibles en todas las plataformas)
       vim.keymap.set("n", "<C-o>", toggle_background_opacity, { desc = "Toggle opacidad Neovim (50%/100%)" })
       vim.keymap.set("i", "<C-o>", toggle_background_opacity, { desc = "Toggle opacidad Neovim (50%/100%)" })
       vim.keymap.set("n", "<leader>po", toggle_background_opacity, { desc = "Toggle Opacidad en Neovim" })
       vim.keymap.set("n", "<leader>co", toggle_background_opacity, { desc = "Toggle Opacidad en Neovim" })
 
-      -- Blur (Windows Terminal)
-      vim.keymap.set("n", "<leader>cb", toggle_windows_terminal_blur, { desc = "Toggle Blur en Windows Terminal" })
-      vim.keymap.set("n", "<leader>pb", toggle_windows_terminal_blur, { desc = "Toggle Blur en Windows Terminal" })
+      -- Atajos de blur (SOLO en Windows/WSL, ignorados en Linux vanilla)
+      if is_wsl or is_windows then
+        vim.keymap.set("n", "<leader>cb", toggle_windows_terminal_blur, { desc = "Toggle Blur en Windows Terminal" })
+        vim.keymap.set("n", "<leader>pb", toggle_windows_terminal_blur, { desc = "Toggle Blur en Windows Terminal" })
+      end
 
       -- Auto-aplicar al cambiar colorscheme
       vim.api.nvim_create_autocmd("ColorScheme", {
@@ -425,9 +476,9 @@ return {
         -- IMPORTANTE: Forzar vim.g.colors_name
         vim.g.colors_name = saved_theme
         -- Aplicar opacidad inicial
-
         apply_background_opacity(false)
       end, 50)
+
       -- 🎨 COMANDO :Theme <nombre> - Cambiar y guardar tema
       vim.api.nvim_create_user_command("Theme", function(opts)
         local theme = opts.args
