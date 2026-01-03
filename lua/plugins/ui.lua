@@ -286,14 +286,14 @@ return {
             indent = 13, -- <--- mayor número lo mueve más a la derecha
             enabled = vim.fn.has("win32") == 0,
           },
-          
+
           {
             pane = 2,
             section = "terminal",
             cmd = "pwsh -c Show-ColorScript -Name square",
             height = 5,
             padding = 1,
-            enabled = vim.fn.has("wsl") == 0,
+            enabled = vim.fn.has("windows") == 0,
           },
 
           -- Columna 1: Keymaps, Recent Files, Projects
