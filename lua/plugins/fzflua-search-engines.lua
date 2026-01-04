@@ -25,7 +25,7 @@ return {
         function()
           require("fzf-lua").files({ cwd = "/mnt/c/Users/diego/" })
         end,
-        desc = "🔍 [FZF] Files (Windows)",
+        desc = "🔍 [FZF] Files HOME / (Windows)",
       },
       -- En teoria seria lo mismo que lo de arriba, pero para WSL
       {
@@ -38,7 +38,7 @@ return {
 
       -- 📋 Otros buscadores FZF
       -- { "<leader>fb", "<cmd>FzfLua buffers<cr>", desc = " 🔍 [FZF] Buffers" },
-      { "<leader>fh", "<cmd>FzfLua help_tags<cr>", desc = " 🔍 [FZF] Help TagS" },
+      { "<leader>h", "<cmd>FzfLua help_tags<cr>", desc = " 🔍 [FZF] Help TagS" },
       { "<leader>fm", "<cmd>FzfLua marks<cr>", desc = " 🔍 [FZF] Marks" },
       { "<leader>fk", "<cmd>FzfLua keymaps<cr>", desc = " 🔍 [FZF] Keymaps" },
       { "<leader>fC", "<cmd>FzfLua commands<cr>", desc = " 🔍 [FZF] Commands" },
@@ -97,11 +97,11 @@ return {
       { "<leader>sP", "<cmd>Pick files<cr>", desc = "Ⓜ️📁 [Mini] Files Pro" },
 
       -- Ⓜ️ Otras funciones de Mini
-      { "<leader>mP", "<cmd>Pick grep_live<cr>", desc = "Ⓜ️🔍 [Mini] Live Grep" },
-      { "<leader>mb", "<cmd>Pick buffers<cr>", desc = "Ⓜ️📄 [Mini] Buffers" },
-      { "<leader>mh", "<cmd>Pick help<cr>", desc = "Ⓜ️❓ [Mini] Help" },
-      { "<leader>mo", "<cmd>Pick oldfiles<cr>", desc = "Ⓜ️📜 [Mini] Old Files" },
-      { "<leader>mc", "<cmd>Pick commands<cr>", desc = "Ⓜ️⚡ [Mini] Commands" },
+      -- { "<leader>mP", "<cmd>Pick grep_live<cr>", desc = "Ⓜ️🔍 [Mini] Live Grep" },
+      -- { "<leader>mb", "<cmd>Pick buffers<cr>", desc = "Ⓜ️📄 [Mini] Buffers" },
+      -- { "<leader>mh", "<cmd>Pick help<cr>", desc = "Ⓜ️❓ [Mini] Help" },
+      -- { "<leader>mo", "<cmd>Pick oldfiles<cr>", desc = "Ⓜ️📜 [Mini] Old Files" },
+      -- { "<leader>mc", "<cmd>Pick commands<cr>", desc = "Ⓜ️⚡ [Mini] Commands" },
     },
     config = function()
       require("mini.pick").setup({
