@@ -448,6 +448,7 @@ end
 -- Cargar modelo al iniciar
 vim.g.ollama_model = load_ollama_model()
 
+-- 🔥 FUNCIÓN CORREGIDA: Envío secuencial para /set nothink
 local function open_ollama(prompt, input_text, use_nothink)
   local cmd_exec = get_ollama_cmd()
   if not cmd_exec then
@@ -458,7 +459,6 @@ local function open_ollama(prompt, input_text, use_nothink)
   local model = vim.g.ollama_model
   vim.cmd("vsplit | vertical resize 50")
 
-  -- Si usamos WSL wrapper, necesitamos quotear el comando completo
   local full_cmd
   if cmd_exec:match("^wsl.*-lic$") then
     full_cmd = cmd_exec .. " 'ollama run " .. model .. "'"
@@ -468,22 +468,35 @@ local function open_ollama(prompt, input_text, use_nothink)
 
   vim.cmd("term " .. full_cmd)
 
-  local final_prompt = ""
-
-  -- 🔥 AGREGAR /set nothink SI SE SOLICITA
-  if use_nothink then
-    final_prompt = "/set nothink\n"
-  end
-
+  -- 🎯 CONSTRUIR EL MENSAJE COMPLETO
+  local full_message = prompt
   if input_text and input_text ~= "" then
-    final_prompt = prompt .. "\n\nAnaliza este código:\n" .. input_text
+    full_message = full_message .. "\n\nAnaliza este código:\n" .. input_text
   end
 
-  vim.defer_fn(function()
-    if vim.b.terminal_job_id then
-      vim.api.nvim_chan_send(vim.b.terminal_job_id, final_prompt .. "\n")
-    end
-  end, 800)
+  -- ⚡ ENVÍO SECUENCIAL
+  if use_nothink then
+    -- PASO 1: Enviar /set nothink (esperar 800ms)
+    vim.defer_fn(function()
+      if vim.b.terminal_job_id then
+        vim.api.nvim_chan_send(vim.b.terminal_job_id, "/set nothink\n")
+
+        -- PASO 2: Enviar el mensaje real (esperar otros 1200ms)
+        vim.defer_fn(function()
+          if vim.b.terminal_job_id then
+            vim.api.nvim_chan_send(vim.b.terminal_job_id, full_message .. "\n")
+          end
+        end, 1200) -- ⏱️ Esperar a que Ollama procese /set nothink
+      end
+    end, 800)
+  else
+    -- Sin nothink: enviar directo
+    vim.defer_fn(function()
+      if vim.b.terminal_job_id then
+        vim.api.nvim_chan_send(vim.b.terminal_job_id, full_message .. "\n")
+      end
+    end, 800)
+  end
 
   vim.cmd("startinsert")
 end
