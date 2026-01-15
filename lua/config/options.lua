@@ -60,3 +60,5 @@ opt.swapfile = false
 
 opt.signcolumn = "yes"
 opt.conceallevel = 2
+-- Permite cambiar de buffer sin guardar (oculta en lugar de cerrar)
+vim.opt.hidden = true

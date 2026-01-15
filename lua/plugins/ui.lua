@@ -1,3 +1,29 @@
+local is_wsl = vim.fn.has("wsl") == 1
+local is_windows = vim.fn.has("win32") == 1 or vim.fn.has("win64") == 1
+local is_linux = vim.fn.has("unix") == 1 and not is_wsl
+
+local dashboard_terminal_section
+if is_wsl or is_windows then
+  dashboard_terminal_section = {
+    pane = 2,
+    section = "terminal",
+    cmd = "pwsh -c Show-ColorScript -Name square",
+    height = 5,
+    padding = 1,
+    enabled = vim.fn.has("wsl") == 0,
+  }
+else
+  dashboard_terminal_section = {
+    pane = 2,
+    section = "terminal",
+    cmd = "pokemon-colorscripts -rn 'vaporeon,rayquaza,darkrai,lucario,gardevoir,lopunny,garchomp,blaziken,charmander,totodile,metagross' --no-title; sleep 0.3",
+    height = 19,
+    padding = 1,
+    indent = 13, -- <--- mayor número lo mueve más a la derecha
+    enabled = vim.fn.has("win32") == 0,
+  }
+end
+
 local mode = {
   "mode",
   fmt = function(s)
@@ -59,7 +85,7 @@ return {
       preset = "classic",
       win = {
         border = "single",
-        width = 130,
+        width = 110,
         col = vim.o.columns, -- <--- lo empuja hasta la derecha
       },
     },
@@ -224,7 +250,6 @@ return {
           return true
         end,
       },
-
       -- image = {},
       picker = {
         exclude = {
@@ -277,24 +302,7 @@ return {
           },
 
           -- Pokémon alternativaa pokemon/square github a la derecha (terminal)
-          {
-            pane = 2,
-            section = "terminal",
-            cmd = "pokemon-colorscripts -rn 'vaporeon,rayquaza,darkrai,lucario,gardevoir,lopunny,garchomp,blaziken,charmander,totodile,metagross' --no-title; sleep 0.3",
-            height = 19,
-            padding = 1,
-            indent = 13, -- <--- mayor número lo mueve más a la derecha
-            enabled = vim.fn.has("win32") == 0,
-          },
-
-          {
-            pane = 2,
-            section = "terminal",
-            cmd = "pwsh -c Show-ColorScript -Name square",
-            height = 5,
-            padding = 1,
-            enabled = vim.fn.has("windows") == 0,
-          },
+          dashboard_terminal_section, -- <-- Solo la variable
 
           -- Columna 1: Keymaps, Recent Files, Projects
           { icon = " ", title = "Keymaps", section = "keys", indent = 2, padding = 1 },
@@ -354,7 +362,7 @@ return {
                 icon = " ",
                 title = "git status",
                 cmd = "git --no-pager diff --stat -b -m -c",
-                height = 10,
+                height = 3,
               },
             }
             return vim.tbl_map(function(cmd)
@@ -394,7 +402,7 @@ return {
           header = [[
 
 
-          
+
       ████ ██████           █████      ██                    
      ███████████             █████                            
      █████████ ███████████████████ ███   ███████████  
@@ -405,10 +413,25 @@ return {
 ]],
           ---@type snacks.dashboard.Item[]
           keys = {
-            { icon = " ", key = "f", desc = "Find File", action = ":lua Snacks.dashboard.pick('files')" },
+            {
+              icon = " ",
+              key = "f",
+              desc = "Find File",
+              action = ":lua Snacks.dashboard.pick('files')",
+            },
             { icon = " ", key = "n", desc = "New File", action = ":ene | startinsert" },
-            { icon = " ", key = "g", desc = "Find Text", action = ":lua Snacks.dashboard.pick('live_grep')" },
-            { icon = " ", key = "r", desc = "Recent Files", action = ":lua Snacks.dashboard.pick('oldfiles')" },
+            {
+              icon = " ",
+              key = "g",
+              desc = "Find Text",
+              action = ":lua Snacks.dashboard.pick('live_grep')",
+            },
+            {
+              icon = " ",
+              key = "r",
+              desc = "Recent Files",
+              action = ":lua Snacks.dashboard.pick('oldfiles')",
+            },
             {
               icon = " ",
               key = "c",

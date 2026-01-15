@@ -94,7 +94,7 @@ if is_windows then
   vim.g.node_host_prog = "C:\\Users\\Diego.DESKTOP-0CQHRL5\\AppData\\Roaming\\npm\\node_modules\\neovim\\bin\\cli.js"
   vim.env.PATH = "C:\\Users\\Diego.DESKTOP-0CQHRL5\\scoop\\apps\\nodejs-lts\\22.18.0;" .. vim.env.PATH
   -- Auto-pywal para Windows
-  require("config.Windows-pywal-wiwalAuto").setup()  
+  require("config.Windows-pywal-wiwalAuto").setup()
 elseif is_unix then
   -- Configuración Linux/macOS
   vim.g.node_host_prog = vim.fn.exepath("node") -- toma el node del PATH

@@ -1,9 +1,8 @@
 -- Al inicio de keymaps.lua
 
--- # CON SHIFT + L = Alt Tab en NVIM
 -- 🦈 <-- TRUCAZO DE OIL: --> ✨
 -- Asi como existe :10 [line preview] tambien lo dispone OIL con:
--- OIL: Navegar en directorio [-] +Ctrl + P = preview [puedes ver los archivos sin abrirlos]
+-- {Navegar en directorio = -} + Ctrl + Q [puedes ver los archivos sin abrirlos]
 -- 🦈 <-- TRUCAZO DE OIL. --> ✨
 
 -- PARA Configurar IAS, revisa:
@@ -12,10 +11,14 @@
 -- OBVIAMENTE REVISA LOS KEYMAPS: config/keymaps.lua
 --
 -- KEYMAPS DE CHAT por IA FUNCIONAN AL SELECCIONAR TEXTO [v]
---
+
 -- =============================
 -- CONFIG BASICA [+GUIA ATAJOS]
 -- =============================
+-- Detectar plataforma
+local is_wsl = vim.fn.has("wsl") == 1
+local is_windows = vim.fn.has("win32") == 1 or vim.fn.has("win64") == 1
+local is_linux = vim.fn.has("unix") == 1 and not is_wsl
 
 vim.g.mapleader = " "
 
@@ -201,29 +204,48 @@ vim.keymap.set("n", "<C-t>", function()
 end, { noremap = true, silent = true })
 
 -- =============================
+-- BUFFERS VISUALES (PowerToys Compatible)
 -- BUFFERS VISUALES (Alt + Número)
 -- =============================
 -- Cambiar a pestaña anterior con [b
-keymap.set("n", "<C-[>", ":bprev<CR>", { noremap = true, silent = true })
-
+if is_wsl or is_windows then
+  keymap.set("n", "<C-P>", ":bprev<CR>", { noremap = true, silent = true })
+else
+  keymap.set("n", "<C-[>", ":bprev<CR>", { noremap = true, silent = true })
+end
 -- Cambiar a pestaña siguiente con ]b
 keymap.set("n", "<C-]>", ":bnext<CR>", { noremap = true, silent = true })
 
 -- Navegación de Buffers al estilo VSCode / Navegador
 vim.keymap.set("n", "<C-PageUp>", ":bprev<CR>", { noremap = true, silent = true, desc = "Buffer anterior" })
 vim.keymap.set("n", "<C-PageDown>", ":bnext<CR>", { noremap = true, silent = true, desc = "Siguiente buffer" })
--- Alt + 1 al 9: Ir a la pestaña visual 1-9 (Mejor compatibilidad que Ctrl)
-vim.keymap.set("n", "<A-1>", "<cmd>BufferLineGoToBuffer 1<CR>", { desc = "Buffer 1" })
-vim.keymap.set("n", "<A-2>", "<cmd>BufferLineGoToBuffer 2<CR>", { desc = "Buffer 2" })
-vim.keymap.set("n", "<A-3>", "<cmd>BufferLineGoToBuffer 3<CR>", { desc = "Buffer 3" })
-vim.keymap.set("n", "<A-4>", "<cmd>BufferLineGoToBuffer 4<CR>", { desc = "Buffer 4" })
-vim.keymap.set("n", "<A-5>", "<cmd>BufferLineGoToBuffer 5<CR>", { desc = "Buffer 5" })
-vim.keymap.set("n", "<A-6>", "<cmd>BufferLineGoToBuffer 6<CR>", { desc = "Buffer 6" })
-vim.keymap.set("n", "<A-7>", "<cmd>BufferLineGoToBuffer 7<CR>", { desc = "Buffer 7" })
-vim.keymap.set("n", "<A-8>", "<cmd>BufferLineGoToBuffer 8<CR>", { desc = "Buffer 8" })
-vim.keymap.set("n", "<A-9>", "<cmd>BufferLineGoToBuffer 9<CR>", { desc = "Buffer 9" })
-vim.keymap.set("n", "<A-0>", "<cmd>BufferLineGoToBuffer -1<CR>", { desc = "Último Buffer" }) -- Activar backspace+Control - MODO INSERCION COMO EN VSCODE!!! = Ctrl W
-vim.api.nvim_set_keymap("i", "<C-H>", "<C-W>", { noremap = true, silent = true })
+-- En WSL con PowerToys, usar F1-F10 (mapeados desde Alt+1-9)
+-- En Linux nativo, usar Alt+1-9 directamente
+if is_wsl or is_windows then
+  -- PowerToys KeyboardManager mapea Alt+1 → F1, etc.
+  vim.keymap.set("n", "<F1>", "<cmd>BufferLineGoToBuffer 1<CR>", { desc = "Buffer 1" })
+  vim.keymap.set("n", "<F2>", "<cmd>BufferLineGoToBuffer 2<CR>", { desc = "Buffer 2" })
+  vim.keymap.set("n", "<F3>", "<cmd>BufferLineGoToBuffer 3<CR>", { desc = "Buffer 3" })
+  vim.keymap.set("n", "<F4>", "<cmd>BufferLineGoToBuffer 4<CR>", { desc = "Buffer 4" })
+  vim.keymap.set("n", "<F5>", "<cmd>BufferLineGoToBuffer 5<CR>", { desc = "Buffer 5" })
+  vim.keymap.set("n", "<F6>", "<cmd>BufferLineGoToBuffer 6<CR>", { desc = "Buffer 6" })
+  vim.keymap.set("n", "<F7>", "<cmd>BufferLineGoToBuffer 7<CR>", { desc = "Buffer 7" })
+  vim.keymap.set("n", "<F8>", "<cmd>BufferLineGoToBuffer 8<CR>", { desc = "Buffer 8" })
+  vim.keymap.set("n", "<F9>", "<cmd>BufferLineGoToBuffer 9<CR>", { desc = "Buffer 9" })
+  vim.keymap.set("n", "<F10>", "<cmd>BufferLineGoToBuffer -1<CR>", { desc = "Último Buffer" }) -- Activar backspace+Control - MODO INSERCION COMO EN VSCODE!!! = Ctrl W
+else
+  -- Linux nativo: Alt+1-9 funciona perfectamente
+  vim.keymap.set("n", "<A-1>", "<cmd>BufferLineGoToBuffer 1<CR>", { desc = "Buffer 1" })
+  vim.keymap.set("n", "<A-2>", "<cmd>BufferLineGoToBuffer 2<CR>", { desc = "Buffer 2" })
+  vim.keymap.set("n", "<A-3>", "<cmd>BufferLineGoToBuffer 3<CR>", { desc = "Buffer 3" })
+  vim.keymap.set("n", "<A-4>", "<cmd>BufferLineGoToBuffer 4<CR>", { desc = "Buffer 4" })
+  vim.keymap.set("n", "<A-5>", "<cmd>BufferLineGoToBuffer 5<CR>", { desc = "Buffer 5" })
+  vim.keymap.set("n", "<A-6>", "<cmd>BufferLineGoToBuffer 6<CR>", { desc = "Buffer 6" })
+  vim.keymap.set("n", "<A-7>", "<cmd>BufferLineGoToBuffer 7<CR>", { desc = "Buffer 7" })
+  vim.keymap.set("n", "<A-8>", "<cmd>BufferLineGoToBuffer 8<CR>", { desc = "Buffer 8" })
+  vim.keymap.set("n", "<A-9>", "<cmd>BufferLineGoToBuffer 9<CR>", { desc = "Buffer 9" })
+  vim.keymap.set("n", "<A-0>", "<cmd>BufferLineGoToBuffer -1<CR>", { desc = "Último Buffer" }) -- Activar backspace+Control - MODO INSERCION COMO EN VSCODE!!! = Ctrl W
+end
 
 -- =============================
 -- FIX DEL CONTROL Backspace
@@ -235,11 +257,19 @@ vim.api.nvim_set_keymap("i", "<C-BS>", "<C-W>", { noremap = true, silent = true 
 
 -- 🚨📌🗿🔥Mapeo para Ctrl + backspace a Ctrl + W en el modo de línea de comandos (la : )🚨📌🗿🔥
 -- Mapeo que usa una función para asegurar que funciona en la línea de comandos
-vim.keymap.set("c", "<C-BS>", function()
-  -- Cierra cualquier ventana de completado y luego ejecuta el comando Ctrl-W
-  -- El comando \b borra una palabra hacia atrás
-  vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<C-W>", true, true, true), "n", true)
-end, { noremap = true, silent = true })
+if is_wsl or is_windows then
+  vim.keymap.set("c", "<C-BS>", function()
+    -- Cierra cualquier ventana de completado y luego ejecuta el comando Ctrl-W
+    -- El comando \b borra una palabra hacia atrás
+    vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<C-W>", true, true, true), "n", true)
+  end, { noremap = true, silent = true })
+else
+  vim.keymap.set("c", "<C-H>", function()
+    -- Cierra cualquier ventana de completado y luego ejecuta el comando Ctrl-W
+    -- El comando \b borra una palabra hacia atrás
+    vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<C-W>", true, true, true), "n", true)
+  end, { noremap = true, silent = true })
+end
 
 -- ---------------------------------------------------|-
 --👹📌🗿🔥Mismo mapeo pero para el modo de inserción en buffers normales👹📌🗿🔥
@@ -366,6 +396,8 @@ end, { desc = "Abrir dashboard de Snacks" })
 -- ==================================================================
 -- [⚠ BETA⚠!] KEYMAPS OLLAMA AI (LOCAL) 󰎣 🦙🤖🔥️ NO REQUIERE INTERNET
 -- ==================================================================
+-- Como agrego: /set nothink
+-- En los 6 primeras opciones de Ollama, agrego: set nothink
 
 -- Ruta del archivo de configuración
 local config_dir = vim.fn.stdpath("data") .. "/ollama"
@@ -390,27 +422,24 @@ end
 
 -- Helper para buscar el comando de ollama (WSL/Windows/Linux)
 local function get_ollama_cmd()
-  -- 0. Override manual (si el usuario lo define en su config)
+  -- 1. Verificar si hay comando custom
   if vim.g.ollama_cmd_custom then
     return vim.g.ollama_cmd_custom
   end
 
-  -- 1. Intentar encontrar el ejecutable nativo (usamos exepath para la ruta completa)
+  -- 2. Buscar ollama nativo
   if vim.fn.executable("ollama") == 1 then
     return vim.fn.exepath("ollama")
   end
 
-  -- 2. En Windows, intentar encontrar ollama.exe explícitamente
-  if vim.fn.executable("ollama.exe") == 1 then
+  -- 3. En Windows, buscar ollama.exe
+  if is_windows and vim.fn.executable("ollama.exe") == 1 then
     return vim.fn.exepath("ollama.exe")
   end
 
-  -- 3. Fallback: Si estamos en Windows y no hay ollama nativo, intentar usar WSL
-  -- IMPORTANTE: Usamos login shell (-l) para cargar el PATH del usuario
-  if vim.fn.has("win32") == 1 or vim.fn.has("win64") == 1 then
-    if vim.fn.executable("wsl") == 1 then
-      return "wsl $SHELL -lic"
-    end
+  -- 4. En WSL, intentar usar ollama de Windows
+  if is_wsl and vim.fn.executable("wsl") == 1 then
+    return "wsl $SHELL -lic"
   end
 
   return nil
@@ -419,7 +448,7 @@ end
 -- Cargar modelo al iniciar
 vim.g.ollama_model = load_ollama_model()
 
-local function open_ollama(prompt, input_text)
+local function open_ollama(prompt, input_text, use_nothink)
   local cmd_exec = get_ollama_cmd()
   if not cmd_exec then
     vim.notify("❌ Ollama no encontrado. Asegúrate de tenerlo instalado y en tu PATH.", vim.log.levels.ERROR)
@@ -439,7 +468,13 @@ local function open_ollama(prompt, input_text)
 
   vim.cmd("term " .. full_cmd)
 
-  local final_prompt = prompt
+  local final_prompt = ""
+
+  -- 🔥 AGREGAR /set nothink SI SE SOLICITA
+  if use_nothink then
+    final_prompt = "/set nothink\n"
+  end
+
   if input_text and input_text ~= "" then
     final_prompt = prompt .. "\n\nAnaliza este código:\n" .. input_text
   end
@@ -534,13 +569,28 @@ local function show_ollama_modelfile()
     "# 📝 MODELFILE DE: " .. model,
     "# ",
     "# 🔧 EDITA ESTE ARCHIVO Y GUARDA CON :w",
-    "# ⚡ APLICA CAMBIOS: :OllamaApply",
+    "# ⚡ APLICA CAMBIOS: :OllamaApply  Esto descarga el modelo custom",
+    "# ",
+    "# 󰧑 🔧¿Como desactivar NOTHINK? ",
+
+    "# ",
+    " Solución 1: Usa /set nothink en CLI (Más Simple), Ej:",
+    "# ollama run deepseek-v3.1:671b-cloud",
+    "# >>> /set nothink",
+    "# >>> Tu pregunta aqui.",
+
+    " Solución 2: Usar el archivo de modelfile (Más Complejo), Ej:",
+    "# ",
     "# 📚 Docs: https://github.com/ollama/ollama/blob/main/docs/modelfile.md",
     "# ",
     "# EJEMPLOS DE PERSONALIZACIÓN:",
     "# PARAMETER temperature 0.7    # Creatividad (0.0 = conservador, 1.0 = creativo)",
-    "# PARAMETER num_ctx 8192        # Contexto (tokens de memoria)",
-    '# SYSTEM "Eres un experto en..." # Prompt del sistema',
+    "# PARAMETER num_ctx 16384        # Contexto (tokens de memoria)",
+    "# PARAMETER stop '<think>' # Para evitar que el modelo se preocupe por preguntas",
+    "# PARAMETER stop '</think>'",
+
+    "# SYSTEM 'Eres un experto en...'' # Prompt del sistema",
+    "# SYSTEM 'Eres un asistente de programación experto en MERN stack. Responde de forma directa sin mostrar tu proceso de pensamiento interno.'",
     "# ",
     "",
   }
@@ -591,10 +641,11 @@ local function show_ollama_menu(selected_text)
     "📄 [Local] Ver/Editar Modelfile (" .. current_model .. ")",
     "📋 [Local] Listar modelos instalados",
     "⚙️ [Local] Cambiar modelo (" .. current_model .. ")",
+    "💬 [Local] Logearte con Ollama + API para usar CLOUD",
   }
 
   vim.ui.select(options, {
-    prompt = " 󰊭 ~ Ollama (" .. current_model .. "):",
+    prompt = " 󰎣 ⭕ ~ Ollama (" .. current_model .. "):",
   }, function(choice, idx)
     if not choice then
       return
@@ -608,6 +659,9 @@ local function show_ollama_menu(selected_text)
       "Optimiza este código:",
       "",
     }
+
+    -- Opciones que usan /set nothink (primeras 5)
+    local use_nothink = idx >= 1 and idx <= 5
 
     if idx == 7 then -- Ver/Editar Modelfile
       show_ollama_modelfile()
@@ -624,14 +678,24 @@ local function show_ollama_menu(selected_text)
           vim.notify("✅ Modelo guardado: " .. input, vim.log.levels.INFO)
         end
       end)
+    elseif idx == 10 then -- Login + Cloud
+      vim.cmd("vsplit | vertical resize 50")
+      -- 🎨 Con colores
+      vim.cmd("term unbuffer ollama signin | bat --color=always --style=plain")
+      vim.notify("🚀 Ejecutando signin con colores", vim.log.levels.INFO)
     elseif idx == 6 then -- Chat Libre
       vim.ui.input({ prompt = "Ollama Prompt: " }, function(input)
         if input and input ~= "" then
-          open_ollama(input, selected_text)
+          -- Preguntar si quiere usar /set nothink
+          vim.ui.select({ "Sí, desactivar reasoning", "No, mostrar reasoning" }, {
+            prompt = "¿Desactivar reasoning (/set nothink)?",
+          }, function(choice2, idx2)
+            open_ollama(input, selected_text, idx2 == 1)
+          end)
         end
       end)
-    else
-      open_ollama(prompts[idx], selected_text)
+    else -- Usar prompt con o sin /set nothink según la opción
+      open_ollama(prompts[idx], selected_text, use_nothink)
     end
   end)
 end
@@ -639,17 +703,17 @@ end
 -- Mapeos
 vim.keymap.set("n", "<leader>ao", function()
   show_ollama_menu(nil)
-end, { desc = " 󰎣  🦙 Abrir Ollama" })
+end, { desc = " 󰎣 🅾️ 🦙 Abrir Ollama" })
 
 vim.keymap.set("v", "<leader>ao", function()
   vim.cmd('normal! "+y')
   local selected_text = vim.fn.getreg('"')
   show_ollama_menu(selected_text)
-end, { desc = " 󰎣 🦙 Enviar selección a Ollama" })
+end, { desc = " 󰎣 🅾️ 🦙 Enviar selección a Ollama" })
 
 -- Comandos
 vim.api.nvim_create_user_command("OllamaModel", function()
-  vim.notify("🦙 Modelo actual: " .. vim.g.ollama_model, vim.log.levels.INFO)
+  vim.notify(" 󰎣 🅾️ 🦙 Modelo actual: " .. vim.g.ollama_model, vim.log.levels.INFO)
 end, {})
 
 vim.api.nvim_create_user_command("OllamaList", function()
@@ -659,17 +723,17 @@ end, {})
 -- Mapeos directos
 vim.keymap.set("n", "<leader>am", function()
   show_ollama_modelfile()
-end, { desc = " 󰎣 🦙 Ver/Editar Modelfile" })
+end, { desc = " 󰎣 🅾️ 🦙 Ver/Editar Modelfile" })
 
 vim.keymap.set("n", "<leader>al", function()
   show_ollama_list()
-end, { desc = " 󰎣 🦙 Listar modelos" })
+end, { desc = " 󰎣 🅾️ 🦙 Listar modelos" })
 
 -- Switch / Cambiar Modelo ~ <leader>as
 vim.keymap.set("n", "<leader>as", function()
   local current_model = vim.g.ollama_model or "deepseek-r1"
   vim.ui.input({
-    prompt = "🦙 Nuevo modelo (actual: " .. current_model .. "): ",
+    prompt = " 󰎣 🅾️ 🦙 Nuevo modelo (actual: " .. current_model .. "): ",
     default = current_model,
   }, function(input)
     if input and input ~= "" then
@@ -678,7 +742,7 @@ vim.keymap.set("n", "<leader>as", function()
       vim.notify("✅ Modelo guardado: " .. input, vim.log.levels.INFO)
     end
   end)
-end, { desc = " 󰎣 🦙 Switch/Cambiar modelo de Ollama rápido" })
+end, { desc = " 󰎣 🅾️ 🦙 Switch/Cambiar modelo de Ollama rápido" })
 
 -- ===================================================================================
 -- Utilidades para Claude v2.1.6] ~ [by dizzi1222] - Yanked proyecto, copiar Proyecto
@@ -796,12 +860,13 @@ end, { desc = "Ver info del proyecto para Claude" })
 -- Gemini-cli que abre al lado en vertical [Gemini > Copilot, ofrece mas prompts GRATIS]
 -- Funcion que selecciona y copia el texto para enviarlo a Gemini
 -- Mapeo para salir del terminal con ESC
+-- La función open_gemini modificada para usar comillas dobles
 vim.api.nvim_set_keymap("t", "<Esc>", "<C-\\><C-n>", { noremap = true })
 
 local function open_gemini(prompt, input_text)
   local root = vim.fn.fnamemodify(vim.fn.expand("%:p"), ":h")
   vim.cmd("vsplit | vertical resize 50")
-  local cmd = "gemini --prompt-interactive '" .. prompt .. "' --include-directories " .. root
+  local cmd = 'gemini --prompt-interactive "' .. prompt .. '" --include-directories "' .. root .. '"'
   vim.cmd("term " .. cmd)
   if input_text and input_text ~= "" then
     vim.defer_fn(function()
@@ -855,7 +920,7 @@ end
 keymap.set("n", "<leader>ag", function()
   show_gemini_menu(nil)
 end, {
-  desc = " 󰊭  ~ Abrir Gemini con menú",
+  desc = " 󰊭 ~ Abrir Gemini con menú",
 })
 
 -- Mapeo para modo visual
@@ -935,6 +1000,7 @@ end, { desc = "Delete all marks" })
 -- =============================
 -- TMUX NAVIGATION (Gentleman config)
 -- =============================
+-- Línea 364 aprox en keymaps.lua
 if not is_vscode and not is_windows then
   local ok, nvim_tmux_nav = pcall(require, "nvim-tmux-navigation")
   if ok then
@@ -942,6 +1008,7 @@ if not is_vscode and not is_windows then
     nvim_tmux_nav.setup({
       disable_when_zoomed = true,
     })
+
     -- Mapeos de navegación
     keymap.set("n", "<C-h>", nvim_tmux_nav.NvimTmuxNavigateLeft)
     keymap.set("n", "<C-j>", nvim_tmux_nav.NvimTmuxNavigateDown)
@@ -951,6 +1018,7 @@ if not is_vscode and not is_windows then
     keymap.set("n", "<C-Space>", nvim_tmux_nav.NvimTmuxNavigateNext)
   end
 end
+
 -- =============================
 -- OBSIDIAN (Gentleman config)
 -- =============================
@@ -988,7 +1056,7 @@ function SaveFile()
 end
 
 -- =============================
--- KEYMAPS GENTLEMAN / CLAUDE (SEPARADO) \ AL SELECCIONAR TEXTO [ 💸💳💰REQUIERE API:]
+-- KEYMAPS GENTLEMAN / CLAUDE (SEPARADO) \ AL SELECCIONAR TEXTO [v]
 -- =============================
 local has_claude, claude = pcall(require, "claude-code")
 if has_claude then
@@ -1003,7 +1071,7 @@ if has_claude then
   end, { desc = "  Claude: abrir panel" })
 
   -- Optional: enviar línea actual a Claude y obtener respuesta
-  vim.keymap.set("n", "<leader>aL", function()
+  vim.keymap.set("n", "<leader>al", function()
     claude.complete_line()
   end, { desc = "  Claude: completar línea actual" })
 
@@ -1114,3 +1182,37 @@ vim.defer_fn(function()
     })
   end
 end, 110) -- FORZAR Ctrl+Space para TABEAR -- ✅ CORRECTO - Fíjate en los cierres
+
+-- =============================
+-- OCULTAR/MOSTRAR BUFFERS
+-- =============================
+
+-- Ocultar buffer actual (sin cerrarlo)
+keymap.set("n", "<leader>bh", ":hide<CR>", {
+  desc = "Ocultar buffer (mantener en memoria)",
+})
+
+-- Mostrar lista de buffers ocultos
+keymap.set("n", "<leader>ba", ":ls!<CR>", {
+  desc = "All - Listar todos los buffers (incluyendo ocultos)",
+})
+
+-- Cambiar a buffer específico (incluso si está oculto)
+keymap.set("n", "<leader>bz", ":buffers<CR>:buffer<Space>", {
+  desc = "Zxy - Cambiar a buffer por número",
+})
+
+-- Cerrar buffer ACTUAL pero mantener ventana (usando enew)
+keymap.set("n", "<leader>bc", ":enew | bdelete #<CR>", {
+  desc = "Cerrar buffer pero mantener ventana",
+})
+
+-- Para dividir la pantalla/buffers:
+-- <space>+| > Split horizontal
+-- <space>+--  > Split vertical
+-- <space>+bh > Revertir DIVISION
+-- <space>+wm > Maximizar ventana [FULLSCREEN]
+-- Ctrl+<,>,up,down > POSICIONAR VENTANA
+-- Ctrl+W > Acceder a modo ventanas
+-- Ctrl+h,k,l,j > Navegación entre ventanas
+--

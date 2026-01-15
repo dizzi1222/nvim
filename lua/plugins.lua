@@ -31,7 +31,6 @@ return {
       -- Atajos estilo VSCode
       vim.keymap.set("n", "<leader>cp", "<cmd>CccPick<cr>", { desc = "Color Picker" })
       vim.keymap.set("n", "<leader>cc", "<cmd>CccConvert<cr>", { desc = "Convertir color" })
-
     end,
   },
 }
