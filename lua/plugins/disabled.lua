@@ -29,17 +29,26 @@ return {
     -- URL: https://github.com/yetone/avante.nvim
     -- Description: Este plugin ofrece una serie de mejoras y herramientas para optimizar la edición de texto en Neovim.
     "yetone/avante.nvim",
-    enabled = false,
-  },
-  {
-    "CopilotC-Nvim/CopilotChat.nvim",
     enabled = true,
   },
   {
-    "zbirenbaum/copilot.lua",
+    "CopilotC-Nvim/CopilotChat.nvim",
     enabled = false,
   },
-  { "supermaven-nvim", enabled = true },
+  {
+    "zbirenbaum/copilot.lua",
+    enabled = true,
+  },
+  -- 󰙯 Discord Presence plugin's for Neovim 
+  {
+    "andweeb/presence.nvim",
+    enabled = false,
+  },
+  {
+    "vyfor/cord.nvim",
+    enabled = true,
+  },
+  { "supermaven-nvim", enabled = false },
   {
     "codota/tabnine-nvim", -- el autocompletado es mierda (no me funciona), y requiere app externa :/
     enabled = false,
@@ -56,7 +65,7 @@ return {
   },
   {
     "tris203/precognition.nvim",
-    enabled = false,
+    enabled = true,
   },
   {
     -- Plugin: claude-code.nvim
@@ -66,9 +75,9 @@ return {
     enabled = false,
   },
   {
-    "jonroosevelt/gemini-cli.nvim",
-    enabled = false,
+    "sphamba/smear-cursor.nvim",
+    enabled = true,
   },
-  { "obsidian-nvim/obsidian.nvim", enabled = false },
+  { "obsidian-nvim/obsidian.nvim", enabled = true },
   -- { "nvim-lua/plenary.nvim", enabled = false },
 }

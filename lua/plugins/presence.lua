@@ -3,7 +3,7 @@ return {
     "andweeb/presence.nvim",
     lazy = false,
     config = function()
-      require("presence"):setup({
+      require("plugins.presence"):setup({
         auto_update = true, -- Actualiza automáticamente tu estado
         neovim_image_text = "Editando en Neovim",
         main_image = "neovim",

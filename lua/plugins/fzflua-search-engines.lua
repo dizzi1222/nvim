@@ -12,7 +12,7 @@ return {
     dependencies = { "nvim-tree/nvim-web-devicons" },
     keys = {
       -- 🔍 BÚSQUEDA PRINCIPAL
-      { "<leader>fz", "<cmd>FzfLua files<cr>", desc = " 🔍 [FZF] Search Files" },
+      -- { "<leader>fz", "<cmd>FzfLua files<cr>", desc = " 🔍 [FZF] Search Files" },
       { "<leader>fG", "<cmd>FzfLua live_grep<cr>", desc = " 🔍 [FZF] Live Grep" },
 
       -- 📂 UBICACIONES ESPECÍFICAS
@@ -30,10 +30,10 @@ return {
 
       -- 📋 UTILIDADES
       { "<leader>h", "<cmd>FzfLua help_tags<cr>", desc = " 🔍 [FZF] Help" },
-      { "<leader>fm", "<cmd>FzfLua marks<cr>", desc = " 🔍 [FZF] Marks" },
+      -- { "<leader>fm", "<cmd>FzfLua marks<cr>", desc = " 🔍 [FZF] Marks" },
       { "<leader>fk", "<cmd>FzfLua keymaps<cr>", desc = " 🔍 [FZF] Keymaps" },
-      { "<leader>fb", "<cmd>FzfLua buffers<cr>", desc = " 🔍 [FZF] Buffers" },
-      { "<leader>fo", "<cmd>FzfLua oldfiles<cr>", desc = " 🔍 [FZF] Old Files" },
+      -- { "<leader>fb", "<cmd>FzfLua buffers<cr>", desc = " 🔍 [FZF] Buffers" },
+      -- { "<leader>fo", "<cmd>FzfLua oldfiles<cr>", desc = " 🔍 [FZF] Old Files" },
       { "<leader>fC", "<cmd>FzfLua commands<cr>", desc = " 🔍 [FZF] Commands" },
       { "<leader>f:", "<cmd>FzfLua command_history<cr>", desc = " 🔍 [FZF] History" },
 
