@@ -63,7 +63,7 @@ require("lazy").setup({
     { "LazyVim/LazyVim", import = "lazyvim.plugins" },
     -- Import any extra modules here
     -- Editor plugins
-    { import = "lazyvim.plugins.extras.editor.harpoon2" },
+    -- { import = "lazyvim.plugins.extras.editor.harpoon2" },
     { import = "lazyvim.plugins.extras.editor.mini-files" },
     { import = "lazyvim.plugins.extras.editor.snacks_explorer" },
     { import = "lazyvim.plugins.extras.editor.snacks_picker" },
@@ -114,7 +114,7 @@ require("lazy").setup({
     rtp = {
       -- Disable some runtime path plugins to improve performance
       disabled_plugins = {
-        -- Para usar el de avante 
+        -- Para usar el de avante
         "markdown", -- Deshabilita el extra de markdown de LazyVim
         "gzip",
         -- "matchit",
