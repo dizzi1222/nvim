@@ -327,16 +327,21 @@ local function show_ollama_menu(selected_text)
   end)
 end
 
--- Mapeos
-vim.keymap.set("n", "<leader>aO", function()
-  show_ollama_menu(nil)
-end, { desc = " 󰎣  🦙 Abrir Ollama" })
+-- MAPEOS
+vim.keymap.set("n", "<leader>al", function()
+  show_ollama_list()
+end, { desc = " 󰎣  🦙 Listar modelos" })
 
 vim.keymap.set("v", "<leader>aO", function()
   vim.cmd('normal! "+y')
   local selected_text = vim.fn.getreg('"')
   show_ollama_menu(selected_text)
 end, { desc = " 󰎣  🦙 Enviar selección a Ollama" })
+
+-- Mapeos DESACTIVADOS TEMPORALMENTE!!!
+-- vim.keymLap.set("n", "<leader>aO", function()
+--   show_ollama_menu(nil)
+-- end, { desc = " 󰎣  🦙 Abrir Ollama" })
 
 -- Comandos
 vim.api.nvim_create_user_command("OllamaModel", function()
@@ -348,25 +353,21 @@ vim.api.nvim_create_user_command("OllamaList", function()
 end, {})
 
 -- Mapeos directos
-vim.keymap.set("n", "<leader>am", function()
-  show_ollama_modelfile()
-end, { desc = " 󰎣  🦙 Ver/Editar Modelfile" })
-
-vim.keymap.set("n", "<leader>al", function()
-  show_ollama_list()
-end, { desc = " 󰎣  🦙 Listar modelos" })
+-- vim.keymap.set("n", "<leader>am", function()
+--   show_ollama_modelfile()
+-- end, { desc = " 󰎣  🦙 Ver/Editar Modelfile" })
 
 -- Switch / Cambiar Modelo ~ <leader>as
-vim.keymap.set("n", "<leader>as", function()
-  local current_model = vim.g.ollama_model or "deepseek-r1"
-  vim.ui.input({
-    prompt = " 󰎣  🦙 Nuevo modelo (actual: " .. current_model .. "): ",
-    default = current_model,
-  }, function(input)
-    if input and input ~= "" then
-      vim.g.ollama_model = input
-      save_ollama_model(input)
-      vim.notify("✅ Modelo guardado: " .. input, vim.log.levels.INFO)
-    end
-  end)
-end, { desc = " 󰎣  🦙 Switch/Cambiar modelo de Ollama rápido" })
+-- vim.keymap.set("n", "<leader>as", function()
+--   local current_model = vim.g.ollama_model or "deepseek-r1"
+--   vim.ui.input({
+--     prompt = " 󰎣  🦙 Nuevo modelo (actual: " .. current_model .. "): ",
+--     default = current_model,
+--   }, function(input)
+--     if input and input ~= "" then
+--       vim.g.ollama_model = input
+--       save_ollama_model(input)
+--       vim.notify("✅ Modelo guardado: " .. input, vim.log.levels.INFO)
+--     end
+--   end)
+-- end, { desc = " 󰎣  🦙 Switch/Cambiar modelo de Ollama rápido" })

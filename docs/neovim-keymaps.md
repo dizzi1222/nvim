@@ -42,13 +42,17 @@ Apuntes personales con los atajos más importantes y trucos útiles.
 
 Oil es un editor de directorio. Algunos trucos:
 
-| Keys                      | Description                       | Notas                          |
-| ------------------------- | --------------------------------- | ------------------------------ |
-| `-`                       | Abrir Oil en directorio actual    | Similar a `..` en terminal     |
-| `<space>E`                | Oil flotante (cwd)                | Ventaja: no afecta splits      |
-| `<space>e`                | Explorer desde archivo actual     | Ver Oil desde raíz del archivo |
-| **Después `-` + `<C-q>`** | **Preview archivos sin abrirlos** | **Como `:10` pero en Oil**     |
-| `g?`                      | Show help en Oil                  | Documentación contextual       |
+| Keys                      | Description                        | Notas                          |
+| ------------------------- | ---------------------------------- | ------------------------------ |
+| `-`                       | Abrir Oil en directorio actual     | Similar a `..` en terminal     |
+| `<space>E`                | Oil flotante (cwd)                 | Ventaja: no afecta splits      |
+| `<space>e`                | Explorer desde archivo actual      | Ver Oil desde raíz del archivo |
+| **Después `-` + `<C-q>`** | **Preview archivos sin abrirlos**  | **Como `:10` pero en Oil**     |
+| `g?`                      | Show help en Oil                   | Documentación contextual       |
+| `zc`                      | Cierra Fold/Pliegue Actual         | Truco Aparte Inline            |
+| `zo`                      | Abre Fold/Pliegue Actual           | Truco Aparte Inline            |
+| `zO`                      | Abre TODO el Fold/Pliegue Actual   | Truco Aparte Inline            |
+| `zM`                      | Cierra TODO el Fold/Pliegue Actual | Truco Aparte Inline            |
 
 **Truco Combo:**
 

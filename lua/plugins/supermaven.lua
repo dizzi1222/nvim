@@ -13,7 +13,7 @@ return {
       },
       ignore_filetypes = { cpp = true },
       color = {
-        suggestion_color = "#595959", -- Manteniendo tu color anterior
+        suggestion_color = "#caa99b", -- Manteniendo tu color anterior -- #808080
         blend = 20, -- blend ya no aparece en el ejemplo de configuración, revisa si aún es soportado.
         cterm = 244,
       },

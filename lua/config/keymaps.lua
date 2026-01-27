@@ -101,17 +101,24 @@ end
 -- =============================
 -- -- Solo en Arhcivos.MD | MARKDown (Gentleman config) - {no funciona bien}
 -- =============================
--- KEYMAPS CORRECTOS:
 keymap.set("n", "<leader>mr", function()
   require("render-markdown").toggle()
+  local state = require("render-markdown.state")
+  if state.enabled then
+    vim.notify("Render Markdown: ON", vim.log.levels.INFO)
+  else
+    vim.notify("Render Markdown: OFF", vim.log.levels.INFO)
+  end
 end, { desc = "Toggle Markdown Render" })
 
 keymap.set("n", "<leader>me", function()
   require("render-markdown").enable()
+  vim.notify("✅ Render Markdown: ENABLED", vim.log.levels.INFO)
 end, { desc = "Enable Markdown Render" })
 
 keymap.set("n", "<leader>md", function()
   require("render-markdown").disable()
+  vim.notify("🚫 Render Markdown: DISABLED", vim.log.levels.INFO)
 end, { desc = "Disable Markdown Render" })
 
 -- =============================

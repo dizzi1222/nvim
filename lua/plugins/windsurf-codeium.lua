@@ -58,7 +58,7 @@ return {
         key_bindings = {
           accept = "<Tab>",
           accept_word = "<C-Enter>", -- M-w
-          suggestion_color = { gui = "#caa99b", cterm = 244 },
+          -- suggestion_color = { gui = "#caa99b", cterm = 244 }, -- #808080
           accept_line = "<C-j>",
           clear = "<C-]>", -- C-e
           next = "<M-]>",
@@ -93,6 +93,8 @@ return {
     keymap("n", "<leader>aL", "<Cmd>Codeium Auth<CR>", { desc = "   🔐 Login/Autenticar Codeium " })
     keymap("n", "<leader>cT", "<Cmd>Codeium Toggle<CR>", { desc = "   🔄 Toggle/Activar Codeium " })
     keymap("n", "<leader>cT", "<Cmd>Codeium Toggle<CR>", { desc = "   🔄 Activar/Toggle Codeium " })
+    keymap("n", "<leader>aT", "<Cmd>Codeium Toggle<CR>", { desc = "   🔄 Toggle/Activar Codeium " })
+    keymap("n", "<leader>aT", "<Cmd>Codeium Toggle<CR>", { desc = "   🔄 Activar/Toggle Codeium " })
     keymap("n", "<leader>cs", "<Cmd>Codeium Status<CR>", { desc = "   📊 Estado Codeium " })
     keymap("n", "<leader>cw", "<Cmd>Codeium Chat<CR>", { desc = "  💬 Web/Api Chat Codeium " })
     keymap("n", "<leader>aw", "<Cmd>Codeium Chat<CR>", { desc = "    💬 Web/Api Chat Codeium " })

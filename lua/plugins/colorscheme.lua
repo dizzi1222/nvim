@@ -317,8 +317,30 @@ return {
         end
       end
 
+      -- 💾 Helper: Guardar opacidad en archivo
+      local function save_opacity_to_file(opacity_value)
+        local opacity_file = vim.fn.stdpath("config") .. "/opacity.txt"
+        local file = io.open(opacity_file, "w")
+        if file then
+          file:write(tostring(opacity_value))
+          file:close()
+        end
+      end
+
+      -- 💾 Helper: Leer opacidad guardada
+      local function get_saved_opacity()
+        local opacity_file = vim.fn.stdpath("config") .. "/opacity.txt"
+        local file = io.open(opacity_file, "r")
+        if file then
+          local value = file:read("*line")
+          file:close()
+          return tonumber(value) or 4 -- Default: transparente
+        end
+        return 4 -- Default si no existe archivo
+      end
+
       -- Estados internos
-      vim.g.background_opacity = 4 -- Opacidad de Neovim (4 = 100% trans, 2 = 50% color)
+      vim.g.background_opacity = get_saved_opacity() -- 💾 Lee del archivo |  -- Opacidad de Neovim (4 = 100% trans, 2 = 50% color)
       vim.g.terminal_blur_enabled = 0 -- Blur de Windows Terminal (0 = Off, 1 = On)
 
       -- Obtener color de fondo según el tema activo (Dinámico)
@@ -393,6 +415,10 @@ return {
         else
           vim.g.background_opacity = 2
         end
+
+        -- 💾 GUARDAR preferencia
+        save_opacity_to_file(vim.g.background_opacity)
+
         apply_background_opacity(true)
       end
 

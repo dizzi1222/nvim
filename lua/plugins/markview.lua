@@ -162,14 +162,27 @@ return {
 
     -- ✅ Asegurar activación en buffers de Avante
     vim.api.nvim_create_autocmd("FileType", {
-      pattern = { "Avante", "AvanteInput", "AvanteAsk" },
+      pattern = { "Markdown", "Norg", "Rmd", "Org", "Vimwiki", "Avante", "AvanteInput", "AvanteAsk" },
       callback = function()
+        -- Desactivar render-markdown si está cargado
+        local ok, render_md = pcall(require, "render-markdown")
+        if ok then
+          -- Método correcto para desactivar
+          pcall(function()
+            render_md.disable()
+          end)
+        end
+
         -- Forzar activación de markview
         vim.cmd("Markview enableAll")
       end,
     })
 
     -- ✅ Keymap para toggle (según la wiki)
-    vim.keymap.set("n", "<leader>mv", "<CMD>Markview toggle<CR>", { desc = "Toggle Markview" })
+    -- Markview toggle (alternativo)
+    vim.keymap.set("n", "<leader>mv", function()
+      vim.cmd("Markview toggle")
+      vim.notify("Markview toggled", vim.log.levels.INFO)
+    end, { desc = "Toggle Markview" })
   end,
 }

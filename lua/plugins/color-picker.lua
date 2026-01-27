@@ -27,7 +27,16 @@ return {
     -- Ruta explícita al .exe de Windows
     picker_path = "/mnt/c/Users/Diego/AppData/Local/nvim-data/oklch-color-picker/oklch-color-picker.exe",
   },
-  config = function(_, opts)
+  config = function()
+    -- config = function(_, opts)
+    require("oklch-color-picker").setup({
+      -- ✅ CRÍTICO: Deshabilitar en buffers de Avante
+      disable_in_buffers = {
+        "Avante",
+        "AvanteInput",
+        "AvanteAsk",
+      },
+    })
     -- ✅ DESHABILITAR en buffers de Avante
     vim.api.nvim_create_autocmd("FileType", {
       pattern = { "Avante", "AvanteInput", "AvanteAsk", "AvanteSelectedFiles" },

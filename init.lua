@@ -126,6 +126,7 @@ require("config.keymaps.open-explorer") -- keymaps para Abrir Explorer/CopyPaste
 require("config.keymaps.fix-backspace") -- keymaps para arreglar backspace en terminales 󰌌 .
 
 -- Requires de configuración
+require("config.highlights") -- Colores personalizados para sugerencias de IA
 require("utils.plugin-switcher") -- Cargador automático de Plugins en disabled.lua  .
 require("config.options") --  .
 require("config.autocmds") --  .

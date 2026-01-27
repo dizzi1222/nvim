@@ -98,6 +98,12 @@ local PLUGINS_CONFIG = {
     category = "UI",
   },
 
+  markdownRender = {
+    name = "Markdown Render",
+    icon = "",
+    file = "render-markdown.nvim",
+    category = "UI",
+  },
   snacks = {
     name = "Snacks",
     icon = "",

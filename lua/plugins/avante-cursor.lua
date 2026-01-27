@@ -175,10 +175,14 @@ return {
         -- 🎯 CONFIGURACIÓN BÁSICA
         --   ---@alias Provider "claude" | "openai" | "azure" | "gemini" | "cohere" | "copilot" | string
         ---@type Provider
-        provider = "ollama", -- Provider por defecto
+        provider = "gemini-cli", -- /o ollama -- Provider por defecto
         ---@alias Mode "agentic" | "legacy"
         ---@type Mode
-        mode = "agentic", -- The default mode for interaction. "agentic" uses tools to automatically generate code, "legacy" uses the old planning method to generate code.
+        mode = "legacy", -- o/ agentic -- 󰄭 GEMINI, Claude, 󰄬 etc SOPORTAN agentic, OLLAMA NO 󰂭 -- The default mode for interaction. "agentic" uses tools to automatically generate code, "legacy" uses the old planning method to generate code.
+        -- 🔕 SILENCIAR NOTIFICACIONES, etiquetas XLS?
+        hints = {
+          enabled = true, -- Desactiva hints que pueden mostrar XML
+        },
 
         -- 📝 Archivo de instrucciones del proyecto
         instructions_file = "avante.md",
@@ -190,14 +194,24 @@ return {
             endpoint = "127.0.0.1:11434", -- Sin /v1
             model = "deepseek-v3.2:cloud", -- Tu modeloAvanteSwitchProvider deepseek
             timeout = 30000,
+            mode = "legacy", -- ✅ CRÍTICO, "agentic" causa crashes
             -- api_key_name = "OLLAMA-API-KEY", -- NO necesitas api_key_name para Ollama local
           },
-
+          -- GEMIMI-CLI 󰊭    OLLAMA 🐐 = LOS UNICOS MODELOS GRATIS DE AVANTE 🐐 󰸞 .
+          ["gemini-clidizzi"] = {
+            __inherited_from = "openai",
+            api_key_name = "GEMINI_API_KEY",
+            endpoint = "https://generativelanguage.googleapis.com/v1beta/openai/",
+            model = "gemini-2.0-flash-exp", -- ✅ Modelo correcto para API OpenAI-compatible
+            timeout = 30000,
+            mode = "agentic",
+          },
           --  GEMINI - API gratuita 💸🐐
           gemini = {
             endpoint = "https://generativelanguage.googleapis.com/v1beta/models",
             model = "gemini-2.0-flash-exp",
-            api_key_name = "AVANTE_GEMINI_API_KEY", -- ✅ NOMBRE DE VARIABLE, NO PATH
+            api_key_name = "GEMINI_API_KEY", -- ✅ NOMBRE DE VARIABLE, NO PATH
+            mode = "agentic", -- USA Tools para GEMINI
             timeout = 30000,
             -- La API key se lee de GEMINI_API_KEY o AVANTE_GEMINI_API_KEY
           },
@@ -208,6 +222,7 @@ return {
             model = "deepseek-chat", -- No-thinking mode (más rápido)
             -- model = "deepseek-reasoner", -- Thinking mode (como Claude)
             timeout = 30000,
+            mode = "agentic", -- USA Tools para DeepSeek
             api_key_name = "DEEPSEEK_API_KEY", -- ✅ NOMBRE DE VARIABLE, NO PATH
             extra_request_body = {
               temperature = 0.75,
@@ -221,6 +236,7 @@ return {
             model = "claude-sonnet-4-20250514",
             timeout = 30000,
             api_key_name = "ANTHROPIC_API_KEY",
+            mode = "agentic", -- USA Tools para Claude
             -- ✅ Usar extra_request_body para evitar warnings
             extra_request_body = {
               temperature = 0.75,
@@ -231,45 +247,43 @@ return {
           --   COPILOT - Pago 💀☠️
           copilot = {
             model = "claude-sonnet-4",
+            mode = "agentic", -- USA Tools para Copilot
+            -- Totalmente de PAGO
           },
-
-          --  MOONSHOT 🚀 - Pago 💀☠️
-          moonshot = {
-            endpoint = "https://api.moonshot.ai/v1",
-            model = "kimi-k2-0711-preview",
-            timeout = 30000,
+          openrouter = {
+            __inherited_from = "openai",
+            endpoint = "https://openrouter.ai/api/v1",
+            model = "qwen/qwen3-coder:free",
+            mode = "agentic", -- USA Tools para OpenRouter
+            -- model = "deepseek/deepseek-chat-v3-0324:free",
+            -- model = "deepseek/deepseek-r1-0528:free",
+            api_key_name = "OPEN_ROUTER_API_KEY",
+            timeout = 30000, -- Timeout in milliseconds
             extra_request_body = {
               temperature = 0.75,
               max_tokens = 32768,
             },
           },
-
-          -- 󰢚 MORPH 👽
-          morph = {
-            model = "morph-v3-large",
-          },
         },
         cursor_applying_provider = "copilot", -- "copilot", "claude", ""
         auto_suggestions_provider = "copilot", -- "copilot", "claude", ""
         --  CONFIGURACION NUEVA EXPERIMENTAL!! 🚀 
-        -- 🔕 SILENCIAR NOTIFICACIONES
-        hints = {
-          enabled = true, -- Desactiva hints molestos
-        },
         ---Note: This is an experimental feature and may not work as expected.
-        -- dual_boost = {
-        --   enabled = false,
-        --   first_provider = "openai",
-        --   second_provider = "claude",
-        --   prompt = "Based on the two reference outputs below, generate a response that incorporates elements from both but reflects your own judgment and unique perspective. Do not provide any explanation, just give the response directly. Reference Output 1: [{{provider1_output}}], Reference Output 2: [{{provider2_output}}]",
-        --   timeout = 60000, -- Timeout in milliseconds
-        -- },
+        dual_boost = {
+          enabled = false,
+          first_provider = "ollama",
+          second_provider = "gemini-cli",
+          -- prompt = "Based on the two reference outputs below, generate a response that incorporates elements from both but reflects your own judgment and unique perspective. Do not provide any explanation, just give the response directly. Reference Output 1: [{{provider1_output}}], Reference Output 2: [{{provider2_output}}]",
+          prompt = "Habla Español,Based on the two reference outputs below, generate a response. Do not provide any explanation, just give the response. Este GPT es un clon del usuario, un arquitecto líder frontend especializado en Angular y React, con experiencia en arquitectura limpia, arquitectura hexagonal y separación de lógica en aplicaciones escalables. Tiene un enfoque técnico pero práctico, con explicaciones claras y aplicables, siempre con ejemplos útiles para desarrolladores con conocimientos intermedios y avanzados.\n\nHabla con un tono profesional pero cercano, relajado y con un toque de humor inteligente. Evita formalidades excesivas y usa un lenguaje directo, técnico cuando es necesario, pero accesible. Su estilo es argentino, sin caer en clichés, y utiliza expresiones como 'buenas acá estamos' o 'dale que va' según el contexto.\n\nSus principales áreas de conocimiento incluyen:\n- Desarrollo frontend con Angular, React y gestión de estado avanzada (Redux, Signals, State Managers propios como Gentleman State Manager y GPX-Store).\n- Arquitectura de software con enfoque en Clean Architecture, Hexagonal Architecure y Scream Architecture.\n- Implementación de buenas prácticas en TypeScript, testing unitario y end-to-end.\n- Loco por la modularización, atomic design y el patrón contenedor presentacional \n- Herramientas de productividad como LazyVim, Tmux, Zellij, OBS y Stream Deck.\n- Mentoría y enseñanza de conceptos avanzados de forma clara y efectiva.\n- Liderazgo de comunidades y creación de contenido en YouTube, Twitch y Discord.\n\nA la hora de explicar un concepto técnico:\n1. Explica el problema que el usuario enfrenta.\n2. Propone una solución clara y directa, con ejemplos si aplica.\n3. Menciona herramientas o recursos que pueden ayudar.\n\nSi el tema es complejo, usa analogías prácticas, especialmente relacionadas con construcción y arquitectura. Si menciona una herramienta o concepto, explica su utilidad y cómo aplicarlo sin redundancias.\n\nAdemás, tiene experiencia en charlas técnicas y generación de contenido. Puede hablar sobre la importancia de la introspección. Reference Output 1: [{{provider1_output}}], Reference Output 2: [{{provider2_output}}]",
+          timeout = 60000, -- Timeout in milliseconds
+        },
         -- FIN -  CONFIGURACION NUEVA EXPERIMENTAL!! 🚀  - FIN
 
         -- 🎨 COMPORTAMIENTO
         behaviour = {
           enable_cursor_planning_mode = true,
           auto_suggestions = false, -- Desactiva auto-sugerencias CHOCA con OLLAMA  .
+          minimize_diff = true, -- ✅ Agregá esto para el minimizado de diff [RENDERIZADO]
           auto_set_highlight_group = true,
           auto_set_keymaps = true,
           support_paste_from_clipboard = true,
@@ -355,7 +369,7 @@ return {
           -- ✅ AGREGAR render_markdown config:
           render_markdown = {
             enabled = true,
-            file_types = { "Avante", "AvanteInput" },
+            file_types = { "Markdown", "Norg", "Rmd", "Org", "Vimwiki", "Avante", "AvanteInput", "AvanteAsk" },
           },
         },
         -- 🎭 SYSTEM PROMPT PERSONALIZADO (Opcional)
@@ -363,10 +377,12 @@ return {
       }
     end,
     dependencies = {
+      "nvim-lua/plenary.nvim",
       "MunifTanjim/nui.nvim",
       -- Opcional pero recomendado
       "nvim-tree/nvim-web-devicons",
 
+      -- Desactivo markdown para usar MARKVIEW sin eliminar el plugin
       {
         "MeanderingProgrammer/render-markdown.nvim",
         lazy = false, -- ← NO lazy loading
@@ -374,6 +390,10 @@ return {
         dependencies = { "folke/snacks.nvim" }, -- ← Dependencia explícita
         opts = {
           file_types = { "markdown", "Avante", "AvanteInput" },
+          render_modes = { "n", "c", "i" }, -- ✅ Renderizar en todos los modos
+          anti_conceal = {
+            enabled = false, -- ✅ Evita que oculte caracteres
+          },
           -- ✅ NO pongas anti_conceal aquí
         },
       },
@@ -392,6 +412,20 @@ return {
             },
             -- required for Windows users
             use_absolute_path = true,
+          },
+        },
+        keys = {
+          -- Pegar desde clipboard (rápido)
+          { "<leader>ip", "<cmd>PasteImage<cr>", desc = "󰋩 Pegar imagen", mode = { "n", "i" } },
+
+          -- Pegar con preview (completo)
+          {
+            "<leader>iP",
+            function()
+              require("img-clip").paste_image()
+            end,
+            desc = "  Pegar con preview  ",
+            mode = { "n", "i" },
           },
         },
       },

@@ -26,6 +26,11 @@ return {
     "OXY2DEV/markview.nvim",
     enabled = true,
   },
+  -- REMPLAZADO POR MARKVIEW
+  {
+    "MeanderingProgrammer/render-markdown.nvim",
+    enabled = false,
+  },
   --  Copilot AI Plugins for Neovim  ..
   -- {
   --   "CopilotC-Nvim/CopilotChat.nvim", -- 1/10 | Codeium: 2/10

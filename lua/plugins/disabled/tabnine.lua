@@ -20,7 +20,7 @@ return {
       dismiss_keymap = "<C-]>",
       accept_word = "<C-Enter>", -- antes estaba como C-j
       debounce_ms = 800,
-      suggestion_color = { gui = "#caa99b", cterm = 244 },
+      suggestion_color = { gui = "#caa99b", cterm = 244 }, -- #808080
       exclude_filetypes = { "TelescopePrompt", "NvimTree" },
       log_file_path = nil, -- absolute path to Tabnine log file
       ignore_certificate_errors = false,
