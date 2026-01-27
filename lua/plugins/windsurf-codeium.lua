@@ -79,6 +79,12 @@ return {
           "requirements.txt",
         },
       },
+      -- En la sección workspace_root, agrega:
+      exclude_paths = {
+        "*.zshrc",
+        "~/.zshrc",
+        ".zsh*",
+      },
     })
 
     --
