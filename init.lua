@@ -173,37 +173,17 @@ vim.opt.timeoutlen = 1000
 vim.opt.ttimeoutlen = 0
 
 -- FEATURE: n1 - 1.0:  Avante con Ollama Permanente Forzar Cloud  .
-vim.api.nvim_create_autocmd("User", {
-  pattern = "LazyLoad",
-  callback = function(event)
-    if event.data == "avante.nvim" then
-      -- Espera un momento a que Avante cargue completamente
-      vim.defer_fn(function()
-        vim.cmd("silent! AvanteSwitchProvider ollama")
-      end, 100)
-    end
-  end,
-})
--- FEATURE: n2 [INESTABLE💀] - 2.0:  Avante 🔕 Silenciar notificaciones molestas de Avante
-
--- 🔇 Override notify para filtrar más agresivamente
--- local original_notify = vim.notify
--- vim.notify = function(msg, level, opts)
---   if type(msg) == "string" then
---     if
---       msg:match("Switch to provider")
---       or msg:match("Using previously selected model")
---       or msg:match("Ollama")
---       or msg:match("ollama")
---       or msg:match("Switched to provider") -- Esta es la que probablemente sale
---       or msg:match("Avante") and msg:match("failed")
---     then
---       return
+-- vim.api.nvim_create_autocmd("User", {
+--   pattern = "LazyLoad",
+--   callback = function(event)
+--     if event.data == "avante.nvim" then
+--       -- Espera un momento a que Avante cargue completamente
+--       vim.defer_fn(function()
+--         vim.cmd("silent! AvanteSwitchProvider ollama")
+--       end, 100)
 --     end
---   end
---
---   original_notify(msg, level, opts)
--- end
+--   end,
+-- })
 
 -- FEATURE n3 - 3.0: Plugin Switcher (toggle Avante, Copilot, etc)
 vim.keymap.set("n", "<leader>aD", function()

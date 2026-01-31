@@ -175,7 +175,7 @@ return {
         -- 🎯 CONFIGURACIÓN BÁSICA
         --   ---@alias Provider "claude" | "openai" | "azure" | "gemini" | "cohere" | "copilot" | string
         ---@type Provider
-        provider = "gemini-cli", -- /o ollama -- Provider por defecto
+        provider = "claude", -- /o ollama -- Provider por defecto
         ---@alias Mode "agentic" | "legacy"
         ---@type Mode
         mode = "legacy", -- o/ agentic -- 󰄭 GEMINI, Claude, 󰄬 etc SOPORTAN agentic, OLLAMA NO 󰂭 -- The default mode for interaction. "agentic" uses tools to automatically generate code, "legacy" uses the old planning method to generate code.
@@ -191,20 +191,23 @@ return {
         providers = {
           --   OLLAMA - Local y gratuito 󰎣
           ollama = {
+            priority = 1,
             endpoint = "127.0.0.1:11434", -- Sin /v1
             model = "deepseek-v3.2:cloud", -- Tu modeloAvanteSwitchProvider deepseek
             timeout = 30000,
             mode = "legacy", -- ✅ CRÍTICO, "agentic" causa crashes
+            disable_tools = true, -- 🔥 Agregar esto
             -- api_key_name = "OLLAMA-API-KEY", -- NO necesitas api_key_name para Ollama local
           },
           -- GEMIMI-CLI 󰊭    OLLAMA 🐐 = LOS UNICOS MODELOS GRATIS DE AVANTE 🐐 󰸞 .
-          ["gemini-clidizzi"] = {
+          ["gemini-cli-dizzi"] = {
             __inherited_from = "openai",
             api_key_name = "GEMINI_API_KEY",
             endpoint = "https://generativelanguage.googleapis.com/v1beta/openai/",
             model = "gemini-2.0-flash-exp", -- ✅ Modelo correcto para API OpenAI-compatible
             timeout = 30000,
-            mode = "agentic",
+            mode = "legacy",
+            disable_tools = true, -- 🔥 Agregar esto
           },
           --  GEMINI - API gratuita 💸🐐
           gemini = {
@@ -212,35 +215,41 @@ return {
             model = "gemini-2.0-flash-exp",
             api_key_name = "GEMINI_API_KEY", -- ✅ NOMBRE DE VARIABLE, NO PATH
             mode = "agentic", -- USA Tools para GEMINI
+            disable_tools = true, -- 🔥 Agregar esto
             timeout = 30000,
             -- La API key se lee de GEMINI_API_KEY o AVANTE_GEMINI_API_KEY
           },
           --  DeepSeek - GRATIS y POTENTE 🚀💸🐐
           deepseek = {
+            priority = 2,
             __inherited_from = "openai", -- ✅ IMPORTANTE: Hereda de OpenAI
             endpoint = "https://api.deepseek.com",
             model = "deepseek-chat", -- No-thinking mode (más rápido)
             -- model = "deepseek-reasoner", -- Thinking mode (como Claude)
             timeout = 30000,
             mode = "agentic", -- USA Tools para DeepSeek
+            disable_tools = true, -- 🔥 Agregar esto
             api_key_name = "DEEPSEEK_API_KEY", -- ✅ NOMBRE DE VARIABLE, NO PATH
             extra_request_body = {
               temperature = 0.75,
-              max_tokens = 8192,
+              max_tokens = 4096, -- Lo baje de 8192
             },
           },
 
           --  CLAUDE - Pago 💀☠️ (SIN deprecated warnings)
           claude = {
+            priority = 1,
             endpoint = "https://api.anthropic.com",
-            model = "claude-sonnet-4-20250514",
+            model = "claude-sonnet-4-20250514", -- O;  claude-3-5-haiku-20241022 / "claude-3-5-sonnet-20241022" / claude-3-opus-20240229 -- Modelo actualizado
+            auth_type = "max", -- 🔥 Usa tu suscripción >>> [NO REQUIERE API KEY, CLAUDE CODE] 🐐.
             timeout = 30000,
-            api_key_name = "ANTHROPIC_API_KEY",
+            -- api_key_name = "ANTHROPIC_API_KEY", --  🔥 Desactivalo si usas suscripción  󰀦
             mode = "agentic", -- USA Tools para Claude
+            disable_tools = true, -- 🔥 Agregar esto
             -- ✅ Usar extra_request_body para evitar warnings
             extra_request_body = {
               temperature = 0.75,
-              max_tokens = 20480,
+              max_tokens = 4096, -- Lo baje de 20480
             },
           },
 
@@ -248,13 +257,15 @@ return {
           copilot = {
             model = "claude-sonnet-4",
             mode = "agentic", -- USA Tools para Copilot
+            disable_tools = true, -- 🔥 Agregar esto
             -- Totalmente de PAGO
           },
           openrouter = {
             __inherited_from = "openai",
             endpoint = "https://openrouter.ai/api/v1",
             model = "qwen/qwen3-coder:free",
-            mode = "agentic", -- USA Tools para OpenRouter
+            mode = "legacy", -- USA Tools para OpenRouter
+            disable_tools = true, -- 🔥 Agregar esto
             -- model = "deepseek/deepseek-chat-v3-0324:free",
             -- model = "deepseek/deepseek-r1-0528:free",
             api_key_name = "OPEN_ROUTER_API_KEY",
@@ -265,14 +276,14 @@ return {
             },
           },
         },
-        cursor_applying_provider = "copilot", -- "copilot", "claude", ""
-        auto_suggestions_provider = "copilot", -- "copilot", "claude", ""
+        cursor_applying_provider = "claude", -- "copilot", "claude", ""
+        auto_suggestions_provider = "claude", -- "copilot", "claude", ""
         --  CONFIGURACION NUEVA EXPERIMENTAL!! 🚀 
         ---Note: This is an experimental feature and may not work as expected.
         dual_boost = {
           enabled = false,
           first_provider = "ollama",
-          second_provider = "deepseek", --  "gemini-cli"
+          second_provider = "claude", -- "deepseek", "gemini-cli"
           -- prompt = "Based on the two reference outputs below, generate a response that incorporates elements from both but reflects your own judgment and unique perspective. Do not provide any explanation, just give the response directly. Reference Output 1: [{{provider1_output}}], Reference Output 2: [{{provider2_output}}]",
           prompt = "Habla Español,Based on the two reference outputs below, generate a response. Do not provide any explanation, just give the response. Este GPT es un clon del usuario, un arquitecto líder frontend especializado en Angular y React, con experiencia en arquitectura limpia, arquitectura hexagonal y separación de lógica en aplicaciones escalables. Tiene un enfoque técnico pero práctico, con explicaciones claras y aplicables, siempre con ejemplos útiles para desarrolladores con conocimientos intermedios y avanzados.\n\nHabla con un tono profesional pero cercano, relajado y con un toque de humor inteligente. Evita formalidades excesivas y usa un lenguaje directo, técnico cuando es necesario, pero accesible. Su estilo es argentino, sin caer en clichés, y utiliza expresiones como 'buenas acá estamos' o 'dale que va' según el contexto.\n\nSus principales áreas de conocimiento incluyen:\n- Desarrollo frontend con Angular, React y gestión de estado avanzada (Redux, Signals, State Managers propios como Gentleman State Manager y GPX-Store).\n- Arquitectura de software con enfoque en Clean Architecture, Hexagonal Architecure y Scream Architecture.\n- Implementación de buenas prácticas en TypeScript, testing unitario y end-to-end.\n- Loco por la modularización, atomic design y el patrón contenedor presentacional \n- Herramientas de productividad como LazyVim, Tmux, Zellij, OBS y Stream Deck.\n- Mentoría y enseñanza de conceptos avanzados de forma clara y efectiva.\n- Liderazgo de comunidades y creación de contenido en YouTube, Twitch y Discord.\n\nA la hora de explicar un concepto técnico:\n1. Explica el problema que el usuario enfrenta.\n2. Propone una solución clara y directa, con ejemplos si aplica.\n3. Menciona herramientas o recursos que pueden ayudar.\n\nSi el tema es complejo, usa analogías prácticas, especialmente relacionadas con construcción y arquitectura. Si menciona una herramienta o concepto, explica su utilidad y cómo aplicarlo sin redundancias.\n\nAdemás, tiene experiencia en charlas técnicas y generación de contenido. Puede hablar sobre la importancia de la introspección. Reference Output 1: [{{provider1_output}}], Reference Output 2: [{{provider2_output}}]",
           timeout = 60000, -- Timeout in milliseconds
@@ -283,6 +294,7 @@ return {
         behaviour = {
           enable_cursor_planning_mode = true,
           auto_suggestions = false, -- Desactiva auto-sugerencias CHOCA con OLLAMA  .
+          disable_tools = true, -- 🔥 Esto desactiva tools para TODOS los providers
           minimize_diff = true, -- ✅ Agregá esto para el minimizado de diff [RENDERIZADO]
           auto_set_highlight_group = true,
           auto_set_keymaps = true,
@@ -407,6 +419,9 @@ return {
           default = {
             embed_image_as_base64 = false,
             prompt_for_file_name = false,
+            only_img = true, -- Solo pegar imágenes  | EXPERIMENTAL   .
+            max_file_size = 5, -- * 1024 * 1024, -- 5MB | EXPERIMENTAL   .
+
             drag_and_drop = {
               insert_mode = true,
             },

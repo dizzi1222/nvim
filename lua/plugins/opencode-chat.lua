@@ -19,14 +19,6 @@ return {
       desc = " 󰮮 Toggle OpenCode [Cli]",
     },
     {
-      "<leader>aA",
-      function()
-        require("opencode").toggle()
-      end,
-      mode = { "n" },
-      desc = " 󰮮 Toggle OpenCode [Cli]",
-    },
-    {
       "<leader>ao",
       function()
         require("opencode").toggle()
@@ -34,14 +26,7 @@ return {
       mode = { "n" },
       desc = " 󰮮 Toggle OpenCode [Cli]",
     },
-    {
-      "<leader>as",
-      function()
-        require("opencode").select({ submit = true })
-      end,
-      mode = { "n", "x" },
-      desc = " 󰮮 OpenCode select",
-    },
+
     {
       "<leader>ai",
       function()
@@ -128,6 +113,14 @@ return {
     ---@type opencode.Opts
     vim.g.opencode_opts = {
       -- Your configuration, if any — see `lua/opencode/config.lua`, or "goto definition" on the type or field.
+      providers = {
+        anthropic = {
+          -- auth_type = "max",  --   Opencode SOLO  funciona con API KEYS
+          api_key_cmd = "echo $ANTHROPIC_API_KEY", -- 🔥 Cambiar ESTO
+          model = "claude-sonnet-4-20250514",
+        },
+      },
+      default_provider = "anthropic",
     }
 
     -- Required for `opts.events.reload`.

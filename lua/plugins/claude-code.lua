@@ -29,7 +29,7 @@ return {
     { "<leader>aa", "<cmd>ClaudeCodeDiffAccept<cr>", desc = "Accept diff" },
     { "<leader>ad", "<cmd>ClaudeCodeDiffDeny<cr>", desc = "Deny diff" },
     -- Preserved existing keymaps
-    { "<leader>at", "<cmd>ClaudeCodeContinue<cr>", desc = "Continue recent conversation" },
-    { "<leader>av", "<cmd>ClaudeCodeVerbose<cr>", desc = "Verbose logging" },
+    -- { "<leader>at", "<cmd>ClaudeCodeContinue<cr>", desc = "Continue recent conversation" },
+    -- { "<leader>av", "<cmd>ClaudeCodeVerbose<cr>", desc = "Verbose logging" },
   },
 }

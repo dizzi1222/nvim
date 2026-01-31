@@ -10,6 +10,7 @@ return {
       },
       default_mode = "build",
       default_model = "ollama/deepseek-v3.1:671b", -- ← AGREGAR ESTA LÍNEA
+      -- default_model = "claude-sonnet-4-20250514", --  Para  Claude 🔥
       opencode_executable = "opencode",
 
       keymap = {
