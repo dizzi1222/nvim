@@ -47,7 +47,7 @@ return {
   },
   {
     "supermaven-nvim", -- 9/10 | Codeium: 2/10
-    enabled = false, -- Muy buen autocompletado, aunque le falte contexto general, recuerda conversaciones pasadas. GRATIS
+    enabled = true, -- Muy buen autocompletado, aunque le falte contexto general, recuerda conversaciones pasadas. GRATIS
   },
   -- {
   --   "codota/tabnine-nvim", -- 1/10 | Codeium: 2/10

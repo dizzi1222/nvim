@@ -409,41 +409,7 @@ return {
           -- ✅ NO pongas anti_conceal aquí
         },
       },
-      -- Soporte para pegar imágenes
-      {
-        -- support for image pasting
-        "HakonHarnes/img-clip.nvim",
-        event = "VeryLazy",
-        opts = {
-          -- recommended settings
-          default = {
-            embed_image_as_base64 = false,
-            prompt_for_file_name = false,
-            only_img = true, -- Solo pegar imágenes  | EXPERIMENTAL   .
-            max_file_size = 5, -- * 1024 * 1024, -- 5MB | EXPERIMENTAL   .
-
-            drag_and_drop = {
-              insert_mode = true,
-            },
-            -- required for Windows users
-            use_absolute_path = true,
-          },
-        },
-        keys = {
-          -- Pegar desde clipboard (rápido)
-          { "<leader>ip", "<cmd>PasteImage<cr>", desc = "󰋩 Pegar imagen", mode = { "n", "i" } },
-
-          -- Pegar con preview (completo)
-          {
-            "<leader>iP",
-            function()
-              require("img-clip").paste_image()
-            end,
-            desc = "  Pegar con preview  ",
-            mode = { "n", "i" },
-          },
-        },
-      },
+      -- [Indexado ] Soporte para pegar imágenes
     },
   },
 }

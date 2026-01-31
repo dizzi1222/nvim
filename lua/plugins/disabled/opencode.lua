@@ -48,7 +48,7 @@ return {
           ["<leader>o/"] = { "quick_chat", mode = { "n", "x" }, desc = "󰮮 Quick chat" },
           ["<leader>aq"] = { "quick_chat", mode = { "n", "x" }, desc = "󰮮 Quick chat [Avante Like sudo-tee]" },
           -- OpenCode [Avante Like sudo-tee] PROMPTS PERSONALIZADOS:
-          ["<leader>a1"] = {
+          ["<leader>aa1"] = {
             function()
               vim.cmd(
                 'Opencode run "Revisar el código seleccionado y sugerir mejoras" model=ollama/deepseek-v3.1:671b'
@@ -57,21 +57,21 @@ return {
             mode = { "n", "x" },
             desc = "󰮮 Revisar código ◎",
           },
-          ["<leader>a2"] = {
+          ["<leader>aa2"] = {
             function()
               vim.cmd('Opencode run "Explicar detalladamente qué hace este código" model=ollama/deepseek-v3.1:671b')
             end,
             mode = { "n", "x" },
             desc = "󰮮 󱜨 Explicar código",
           },
-          ["<leader>a3"] = {
+          ["<leader>aa3"] = {
             function()
               vim.cmd('Opencode run "Debuggear este error y proponer soluciones" model=ollama/deepseek-v3.1:671b')
             end,
             mode = { "n", "x" },
             desc = "󰮮  Debuggear error ◎",
           },
-          ["<leader>a4"] = {
+          ["<leader>aa4"] = {
             function()
               vim.cmd(
                 'Opencode run "Refactorizar este código para mejorar legibilidad y mantenibilidad" model=ollama/deepseek-v3.1:671b'
@@ -80,14 +80,14 @@ return {
             mode = { "n", "x" },
             desc = "󰮮 󰈏 Refactorizar ◎",
           },
-          ["<leader>a5"] = {
+          ["<leader>aa5"] = {
             function()
               vim.cmd('Opencode run "Optimizar el rendimiento de este código" model=ollama/deepseek-v3.1:671b')
             end,
             mode = { "n", "x" },
             desc = "󰮮 󰓅 Optimizar ◎",
           },
-          ["<leader>a6"] = {
+          ["<leader>aa6"] = {
             function()
               vim.cmd('Opencode run "' .. vim.fn.input("󰮮 Custom prompt: ") .. '" model=ollama/deepseek-v3.1:671b')
             end,
