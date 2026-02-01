@@ -2,6 +2,10 @@
 --
 return {
   "supermaven-inc/supermaven-nvim", -- ¡IMPORTANTE! Nuevo repositorio
+  enabled = function()
+    -- Solo en Linux/WSL
+    return vim.fn.has("wsl") == 1 or vim.fn.has("unix") == 1
+  end,
   config = function()
     require("supermaven-nvim").setup({
       keymaps = {
