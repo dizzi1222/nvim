@@ -29,6 +29,7 @@ return {
           ["<leader>oz"] = { "toggle_zoom", desc = "󰮮 Toggle zoom" },
           ["<leader>ov"] = { "paste_image", desc = "󰮮 Paste image" },
           ["<leader>aP"] = { "paste_image", desc = "󰮮 Paste image [Avante Like sudo-tee]" },
+          ["<leader>iv"] = { "paste_image", desc = "󰮮 Paste image [Avante Like sudo-tee]" },
 
           -- Keymaps para diffs
           ["<leader>od"] = { "diff_open", desc = "󰮮 Open diff view" },

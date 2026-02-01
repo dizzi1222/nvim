@@ -10,19 +10,26 @@ return {
     -- Especificación de grupos y mappings
     spec = {
       -- Grupos principales con íconos
-      { "<leader>a", group = "󰧑 AI/Claude", icon = "", color = "orange"  },
-      { "<leader>b", group = "󰓩 Buffer", icon = "󰓩" },
       { "<leader>c", group = " Code" },
       { "<leader>d", group = " Debug" },
       { "<leader>f", group = " File/Find" },
       { "<leader>g", group = "󰊢 Git" },
-      { "<leader>h", group = "󰓹 Tag Menu" },
-      { "<leader>i", group = "󰋩 Imágenes Clipboard" },
       { "<leader>l", group = "󰒲 Lazy" },
-      { "<leader>m", group = "󰍔 Markdown" },
       { "<leader>n", group = " Notifications" },
-      { "<leader>o", group = "󰇈 Obsidian" },
-      { "<leader>p", group = "󱥒 Toggle Pywal" },
+      -- Sintaxis correcta con color
+      { "<leader>i", group = "󰋩 Imágenes Clipboard", icon = { icon = "󰋩", color = "green" } },
+      { "<leader>a", group = " AI/Claude Code", icon = { icon = "󰧑", color = "orange" } },
+      { "<leader>b", group = "󰓩 Buffer", icon = { icon = "󰓩", color = "green" } },
+      { "<leader>h", group = "󰓹 Tag Menu", icon = { icon = "󰛢", color = "blue" } },
+      { "<leader>m", group = "󰍔 Markdown", icon = { icon = "󰍔", color = "red" } },
+      { "<leader>?", group = "show all keymaps", icon = { icon = "󰌌", color = "cyan" } },
+      { "<leader>k", group = "󰌌 screenkey", icon = { icon = "󰳽", color = "cyan" } },
+      { "<leader>K", group = "󰌌 Help Keywordprg", icon = { icon = "󰘦", color = "cyan" } },
+      { "<leader>o", group = "󰇈 Obsidian", icon = { icon = "󰇈", color = "purple" } },
+      { "<leader>p", group = "󱥒  Toggle Pywal", icon = { icon = "", color = "red" } },
+      { "<leader>M", group = "  MCP HUB", icon = { icon = "", color = "purple" } },
+      { "<leader>v", group = "󰉦 󰇀 Color pick", icon = { icon = "", color = "red" } },
+      -- [FIN] Sintaxis correcta con color
       { "<leader>q", group = "󰗼 Quit/Session" },
       { "<leader>s", group = "󰍉 Search" },
       { "<leader>u", group = " UI" },

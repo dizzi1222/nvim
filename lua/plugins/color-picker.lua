@@ -8,7 +8,7 @@ return {
       function()
         require("oklch-color-picker").pick_under_cursor()
       end,
-      desc = "Color pick under cursor",
+      desc = "󰸱 󰇀 Color pick under cursor",
     },
   },
   opts = {

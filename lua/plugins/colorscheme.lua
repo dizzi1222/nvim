@@ -162,54 +162,55 @@ return {
   -- 🔭 TELESCOPE SELECTOR
   {
     "nvim-telescope/telescope.nvim",
-    keys = {
-      {
-        "<leader>ct",
-        function()
-          require("telescope.builtin").colorscheme({
-            enable_preview = true,
-            attach_mappings = function(prompt_bufnr, map)
-              local actions = require("telescope.actions")
-              local action_state = require("telescope.actions.state")
+    keys = function()
+      -- Definir la función una sola vez para reutilizarla
+      local theme_picker = function()
+        require("telescope.builtin").colorscheme({
+          enable_preview = true,
+          attach_mappings = function(prompt_bufnr, map)
+            local actions = require("telescope.actions")
+            local action_state = require("telescope.actions.state")
+            actions.select_default:replace(function()
+              actions.close(prompt_bufnr)
+              local selection = action_state.get_selected_entry()
+              vim.cmd("Theme " .. selection.value)
+            end)
+            return true
+          end,
+          include = {
+            "aura-dark",
+            "aura-soft-dark",
+            "aura-dark-soft-text",
+            "everforest",
+            "catppuccin-frappe",
+            "catppuccin-mocha",
+            "catppuccin-macchiato",
+            "catppuccin-latte",
+            "gruvbox",
+            "oasis",
+            "oasis-lagoon",
+            "oasis-night",
+            "tokyonight",
+            "tokyonight-night",
+            "tokyonight-moon",
+            "neon",
+            "kanagawa",
+            "kanagawa-wave",
+            "kanagawa-dragon",
+            "kanagawa-lotus",
+            "pywal",
+          },
+        })
+      end
 
-              actions.select_default:replace(function()
-                actions.close(prompt_bufnr)
-                local selection = action_state.get_selected_entry()
-                -- Usar el comando :Theme para guardar y aplicar
-                vim.cmd("Theme " .. selection.value)
-              end)
-              return true
-            end,
-            include = {
-              "aura-dark",
-              "aura-soft-dark",
-              "aura-dark-soft-text",
-              "everforest",
-              "catppuccin-frappe",
-              "catppuccin-mocha",
-              "catppuccin-macchiato",
-              "catppuccin-latte",
-              "gruvbox",
-              "oasis",
-              "oasis-lagoon",
-              "oasis-night",
-              "tokyonight",
-              "tokyonight-night",
-              "tokyonight-moon",
-              "neon",
-              "kanagawa",
-              "kanagawa-wave",
-              "kanagawa-dragon",
-              "kanagawa-lotus",
-              "pywal",
-            },
-          })
-        end,
-        desc = "Cambiar colorscheme con preview",
-      },
-    },
+      -- Retornar array con múltiples keymaps
+      return {
+        { "<leader>ct", theme_picker, desc = "🎨 Cambiar colorscheme" },
+        { "<leader>pt", theme_picker, desc = "🎨 Cambiar colorscheme" },
+        { "<leader>t", theme_picker, desc = "🎨 Cambiar colorscheme" },
+      }
+    end,
   },
-
   -- 🌫️ SISTEMA DE OPACIDAD 50%/100% (tu versión funcional restaurada)
   {
     "nvim-lua/plenary.nvim",

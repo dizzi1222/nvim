@@ -42,7 +42,7 @@ return {
       function()
         require("img-clip").paste_image()
       end,
-      desc = "  Pegar con preview  ",
+      desc = "  Pegar con preview  [Avante]",
       mode = { "n", "i" },
     },
   },

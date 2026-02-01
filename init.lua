@@ -4,6 +4,9 @@
 -- para que no guarde todo el texto/ moleste con el Space + Q + Q
 vim.opt.shada = "!,'100,<50,s10,h" -- Config minimalista
 
+-- Cambiado a > Help > Desactivar  busqueda por palabras clave
+vim.opt.keywordprg = ":help" -- Space+K
+
 -- 👈 anteriormente como init-vscode.lua
 if vim.g.scode then
   -- CoPnfiguración específica para VSCode
