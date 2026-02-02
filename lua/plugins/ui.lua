@@ -1,9 +1,22 @@
 local is_wsl = vim.fn.has("wsl") == 1
 local is_windows = vim.fn.has("win32") == 1 or vim.fn.has("win64") == 1
 local is_linux = vim.fn.has("unix") == 1 and not is_wsl
+local is_termux = vim.fn.isdirectory("/data/data/com.termux") == 1
 
+-- ✅ REMOVER el return false, dejar que configure el dashboard
 local dashboard_terminal_section
-if is_wsl or is_windows then
+
+if is_termux then
+  -- Config específica para Termux (sin pokemon)
+  dashboard_terminal_section = {
+    pane = 2,
+    section = "terminal",
+    cmd = "fastfetch --logo android", -- O cualquier comando que funcione en Termux
+    height = 10,
+    padding = 1,
+    enabled = true,
+  }
+elseif is_wsl or is_windows then
   dashboard_terminal_section = {
     pane = 2,
     section = "terminal",
