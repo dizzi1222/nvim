@@ -112,42 +112,42 @@ end, {
   desc = " ~ Enviar selección a AI (" .. ai_cmd .. ")",
 })
 
--- Mapeo adicional para abrir AI directamente (sin menú)
-keymap.set("n", "<leader>ax", function()
-  open_ai(nil, nil)
-end, {
-  desc = " ~ Abrir AI (" .. ai_cmd .. ") directo",
-})
-
--- Mapeo para tgpt directo (sin interactivo)
-keymap.set("n", "<leader>aX", function()
-  local root = vim.fn.fnamemodify(vim.fn.expand("%:p"), ":h")
-  vim.cmd("vsplit | vertical resize 50")
-  vim.cmd('term cd "' .. root .. '" && tgpt -i')
-  -- vim.cmd('term cd "' .. root .. '" && tgpt')
-  vim.cmd("startinsert")
-end, {
-  desc = "🤖 ~ tgpt directo (sin menú)",
-})
-
--- Versión para visual (enviar selección a tgpt directo)
-keymap.set("v", "<leader>aX", function()
-  vim.cmd('normal! "+y')
-  local selected_text = vim.fn.getreg('"')
-  local root = vim.fn.fnamemodify(vim.fn.expand("%:p"), ":h")
-  vim.cmd("vsplit | vertical resize 50")
-  vim.cmd('term cd "' .. root .. '" && tgpt -i')
-  -- vim.cmd('term cd "' .. root .. '" && tgpt')
-
-  vim.defer_fn(function()
-    vim.api.nvim_chan_send(vim.b.terminal_job_id, selected_text .. "\n")
-  end, 500)
-
-  vim.cmd("startinsert")
-end, {
-  desc = "🤖 ~ Enviar a tgpt directo",
-})
-
+-- -- Mapeo adicional para abrir AI directamente (sin menú)
+-- keymap.set("n", "<leader>ax", function()
+--   open_ai(nil, nil)
+-- end, {
+--   desc = " ~ Abrir AI (" .. ai_cmd .. ") directo",
+-- })
+--
+-- -- Mapeo para tgpt directo (sin interactivo)
+-- keymap.set("n", "<leader>aX", function()
+--   local root = vim.fn.fnamemodify(vim.fn.expand("%:p"), ":h")
+--   vim.cmd("vsplit | vertical resize 50")
+--   vim.cmd('term cd "' .. root .. '" && tgpt -i')
+--   -- vim.cmd('term cd "' .. root .. '" && tgpt')
+--   vim.cmd("startinsert")
+-- end, {
+--   desc = "🤖 ~ tgpt directo (sin menú)",
+-- })
+--
+-- -- Versión para visual (enviar selección a tgpt directo)
+-- keymap.set("v", "<leader>aX", function()
+--   vim.cmd('normal! "+y')
+--   local selected_text = vim.fn.getreg('"')
+--   local root = vim.fn.fnamemodify(vim.fn.expand("%:p"), ":h")
+--   vim.cmd("vsplit | vertical resize 50")
+--   vim.cmd('term cd "' .. root .. '" && tgpt -i')
+--   -- vim.cmd('term cd "' .. root .. '" && tgpt')
+--
+--   vim.defer_fn(function()
+--     vim.api.nvim_chan_send(vim.b.terminal_job_id, selected_text .. "\n")
+--   end, 500)
+--
+--   vim.cmd("startinsert")
+-- end, {
+--   desc = "🤖 ~ Enviar a tgpt directo",
+-- })
+--
 -- Info sobre qué AI está activa
 vim.api.nvim_create_user_command("AIInfo", function()
   local msg = "🤖 AI activa: " .. ai_cmd
