@@ -33,7 +33,7 @@ end
 
 local function show_gemini_menu(selected_text)
   local options = {
-    "   Revisar código",
+    "  󱋑  Revisar código",
     "  󱜨 Explicar código",
     "   Debuggear error",
     "  󰈏 Refactorizar",
