@@ -21,6 +21,12 @@ local PLUGINS_CONFIG = {
     file = "code-companion.lua",
     category = "AI Assistant",
   },
+  fittencode = {
+    name = "FittenCode",
+    icon = "",
+    file = "ai-fittencode.lua",
+    category = "AI Assistant",
+  },
   gemini_cli = {
     name = "Gemini CLI",
     icon = "󰊭",
