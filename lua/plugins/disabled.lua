@@ -100,10 +100,10 @@ return {
   --   enabled = false, -- Es de PAGO, pero sin poder afirmarlo, Claude-code sea lo mejor [10/10].
   -- },
   -- {
-  --   -- 0. 󰊭 Prefiero usar mi config de Gemini-cli
-  --   "jonroosevelt/gemini-cli.nvim", -- 3/10
-  --   enabled = false, -- Gratuito, pero el Modo Plan no existe, la implementacion del codigo no existe, y hasta yo hice una mejor config de Gemini-cli 󰊭 .
-  -- },
+  -- 0. 󰊭 Prefiero usar mi config de Gemini-cli
+  { "jonroosevelt/gemini-cli.nvim", -- 3/10
+  enabled = false, -- Gratuito, pero el Modo Plan no existe, la implementacion del codigo no existe, y hasta yo hice una mejor config de Gemini-cli 󰊭 .
+   },
   --  MCPHUB  - Requiere APIKEY DE COPILOT permantente o 30 dias
   { "ravitemer/mcphub.nvim", enabled = true },
   {

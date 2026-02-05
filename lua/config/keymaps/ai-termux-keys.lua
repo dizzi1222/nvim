@@ -112,6 +112,16 @@ end, {
   desc = " ~ Enviar selección a AI (" .. ai_cmd .. ")",
 })
 
+-- Mapeo para modo visual A+C
+keymap.set("v", "<leader>ac", function()
+  -- Copiar texto seleccionado
+  vim.cmd('normal! "+y')
+  local selected_text = vim.fn.getreg('"')
+  show_ai_menu(selected_text)
+end, {
+  desc = " ~ Enviar selección a AI (" .. ai_cmd .. ")",
+})
+
 -- Mapeo adicional para abrir AI directamente (sin menú)
 keymap.set("n", "<leader>ac", function()
   open_ai(nil, nil)

@@ -1,4 +1,4 @@
--- lua/utils/plugin-switcher.lua
+  -- lua/utils/plugin-switcher.lua
 local M = {}
 
 local PLUGINS_CONFIG = {
@@ -359,6 +359,7 @@ function M.toggle_by_category(category)
     end
   end)
 end
+  --  
 
 -- Shortcuts para categorías comunes
 function M.toggle_ai_completion()

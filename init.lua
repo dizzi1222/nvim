@@ -121,9 +121,10 @@ require("config.lazy") --  .
 require("config.keymaps") --  .
 
 -- Requiere de Keymaps
-require("config.keymaps.ollama-keys") -- keymaps para LocalAI [Ollama] 󰎣 🅾️ .
-require("config.keymaps.gemini-keys") -- keymaps para Gemini AI 󰊭 .
+-- require("config.keymaps.ollama-keys") -- keymaps para LocalAI [Ollama] 󰎣 🅾️ .
+-- require("config.keymaps.gemini-keys") -- keymaps para Gemini AI 󰊭 .
 require("config.keymaps.ai-termux-keys") -- keymaps para AICHAT, TGPT AI  .
+require("config.fittencode-keys")
 require("config.keymaps.give-context") -- keymaps para utilidades IA  󰭹
 require("config.keymaps.close-buffers") -- keymaps para manipular buffers  .
 require("config.keymaps.open-explorer") -- keymaps para Abrir Explorer/CopyPaste  .
