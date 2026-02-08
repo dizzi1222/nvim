@@ -6,11 +6,17 @@ return {
     -- if you want to build from source then do `make BUILD_FROM_SOURCE=true`
     -- ⚠️ must add this setting! ! !
     build = function()
-      -- conditionally use the correct build system for the current OS
-      if vim.fn.has("win32") == 1 then
-        return "powershell -ExecutionPolicy Bypass -File Build.ps1 -BuildFromSource false"
-      else
-        return "make"
+      -- Verifica si los templates existen
+      local avante_dir = vim.fn.expand("~/.local/share/nvim/lazy/avante.nvim")
+      local templates_so = avante_dir .. "/dist/avante_templates.so"
+
+      -- Si faltan los templates, compila automáticamente
+      if vim.fn.filereadable(templates_so) == 0 then
+        if vim.fn.has("win32") == 1 then
+          return "powershell -ExecutionPolicy Bypass -File Build.ps1 -BuildFromSource false"
+        else
+          return "make"
+        end
       end
     end,
     event = "VeryLazy",
@@ -113,8 +119,25 @@ return {
         end
       end
 
-      -- Create autocmd group for resize fix
+      -- Create autocmd group for resize fix AND template detection
       vim.api.nvim_create_augroup("AvanteResizeFix", { clear = true })
+
+      -- 🔨 Auto-compile templates si faltan
+      vim.api.nvim_create_augroup("AvanteTemplateCheck", { clear = true })
+      vim.api.nvim_create_autocmd("VimEnter", {
+        group = "AvanteTemplateCheck",
+        callback = function()
+          local avante_dir = vim.fn.expand("~/.local/share/nvim/lazy/avante.nvim")
+          local templates_so = avante_dir .. "/dist/avante_templates.so"
+
+          -- Si faltan los templates, compila automáticamente
+          if vim.fn.filereadable(templates_so) == 0 then
+            vim.notify("📦 Avante templates faltantes. Compilando automáticamente...", vim.log.levels.WARN)
+            vim.fn.system("cd " .. avante_dir .. " && bash build.sh")
+            vim.notify("✅ Avante compilado correctamente. Reinicia Neovim.", vim.log.levels.INFO)
+          end
+        end,
+      })
 
       -- Main resize handler for Resize
       vim.api.nvim_create_autocmd({ "VimResized" }, {
