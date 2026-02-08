@@ -39,7 +39,7 @@ return {
   -- Autocompletion AI Plugins for Neovim   Suggestions, Completions... 󰓅 .[pls add Tab]
   {
     "zbirenbaum/copilot.lua", -- 6/10
-    enabled = false, -- Buen autocompletado, Lo unico gratis de COPILOT  .
+    enabled = true, -- Buen autocompletado, Lo unico gratis de COPILOT  .
   },
   {
     "tris203/precognition.nvim",
