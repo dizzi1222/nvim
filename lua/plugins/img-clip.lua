@@ -37,7 +37,6 @@ return {
     { "<leader>ip", "<cmd>PasteImage<cr>", desc = "󰋩 Pegar imagen [Avante]", mode = { "n", "i" } },
     { "<leader>aP", "<cmd>PasteImage<cr>", desc = "󰋩 Pegar imagen [Avante]", mode = { "n", "i" } },
     { "<leader>aP1", "<cmd>PasteImage<cr>", desc = "󰋩 Pegar imagen [Avante]", mode = { "n", "i" } },
-
     -- Pegar con preview (completo)
     {
       "<leader>iP",
