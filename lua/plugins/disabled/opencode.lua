@@ -28,8 +28,9 @@ return {
           ["<leader>op"] = { "configure_provider", desc = "󰮮 Configure provider/model" },
           ["<leader>oz"] = { "toggle_zoom", desc = "󰮮 Toggle zoom" },
           ["<leader>ov"] = { "paste_image", desc = "󰮮 Paste image" },
-          ["<leader>aP"] = { "paste_image", desc = "󰮮 Paste image [Avante Like sudo-tee]" },
-          ["<leader>iv"] = { "paste_image", desc = "󰮮 Paste image [Avante Like sudo-tee]" },
+          ["<leader>aP"] = { "paste_image", desc = "󰮮 Paste image [Opencode, Avante Like]" },
+          ["<leader>aP2"] = { "paste_image", desc = "󰮮 Paste image [Opencode, Avante Like]" },
+          ["<leader>iv"] = { "paste_image", desc = "󰮮 Paste image [Opencode, Avante Like]" },
 
           -- Keymaps para diffs
           ["<leader>od"] = { "diff_open", desc = "󰮮 Open diff view" },
