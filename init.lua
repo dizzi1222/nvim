@@ -199,3 +199,8 @@ end, { desc = "🔌 Toggle Plugins (Opencode/Avante/Claude/etc)" })
 vim.keymap.set("n", "<leader>D", function()
   require("utils.plugin-switcher").interactive_toggle()
 end, { desc = "🔌 Toggle Plugins (Opencode/Avante/Claude/etc)" })
+
+-- 󰧑 󰮮 Optimización para AI completions multi-línea
+vim.opt.updatetime = 100 -- Respuesta más rápida (default: 4000ms)
+vim.opt.scrolloff = 8 -- Más contexto visible
+vim.opt.synmaxcol = 500 -- Más columnas para análisis
