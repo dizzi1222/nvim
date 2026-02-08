@@ -20,6 +20,7 @@ return {
       { "<leader>i", group = "󰋩 Imágenes Clipboard", icon = { icon = "󰋩", color = "green" } },
       { "<leader>a", group = " AI/Claude Code", icon = { icon = "󰧑", color = "orange" } },
       { "<leader>aA", group = " ~ Abrir AI (aichat) con menú", icon = { icon = "󰧑", color = "orange" } },
+      { "<leader>aF", group = " ~ Abrir AI FittenCode Autocomplete", icon = { icon = "󰧑", color = "orange" } },
       { "<leader>b", group = "󰓩 Buffer", icon = { icon = "󰓩", color = "green" } },
       { "<leader>h", group = "󰓹 Tag Menu", icon = { icon = "󰛢", color = "blue" } },
       { "<leader>m", group = "󰍔 Markdown", icon = { icon = "󰍔", color = "red" } },
