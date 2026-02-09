@@ -101,11 +101,13 @@ if is_windows then
   -- Configuración Windows
   vim.g.node_host_prog = "C:\\Users\\Diego.DESKTOP-0CQHRL5\\AppData\\Roaming\\npm\\node_modules\\neovim\\bin\\cli.js"
   vim.env.PATH = "C:\\Users\\Diego.DESKTOP-0CQHRL5\\scoop\\apps\\nodejs-lts\\22.18.0;" .. vim.env.PATH
-  -- 🔧 CONFIGURAR POWERSHELL COMO SHELL PREDETERMINADO
-  vim.opt.shell = "pwsh.exe" -- o "powershell.exe" para PowerShell 5.1
-  -- vim.opt.shellcmdflag = "-NoLogo -NoProfile -ExecutionPolicy RemoteSigned -Command"
+  -- PowerShell config (evita error "unknown element received")
+  vim.opt.shell = "pwsh.exe"
+  vim.opt.shellcmdflag = "-NoLogo -NoProfile -ExecutionPolicy RemoteSigned -Command"
   vim.opt.shellquote = ""
   vim.opt.shellxquote = ""
+  vim.opt.shellpipe = "| Out-File -Encoding UTF8 %s"
+  vim.opt.shellredir = "| Out-File -Encoding UTF8 %s"
 
   -- Auto-pywal para Windows
   require("utils.Windows-pywal-wiwalAuto").setup() -- Auto-pywal para Windows 
@@ -121,10 +123,10 @@ require("config.lazy") --  .
 require("config.keymaps") --  .
 
 -- Requiere de Keymaps
--- require("config.keymaps.ollama-keys") -- keymaps para LocalAI [Ollama] 󰎣 🅾️ .
--- require("config.keymaps.gemini-keys") -- keymaps para Gemini AI 󰊭 .
-require("config.keymaps.ai-termux-keys") -- keymaps para AICHAT, TGPT AI  .
-require("config.fittencode-keys")
+require("config.keymaps.ollama-keys") -- keymaps para LocalAI [Ollama] 󰎣 🅾️ .
+require("config.keymaps.gemini-keys") -- keymaps para Gemini AI 󰊭 .
+require("config.keymaps.ai-termux-keys") -- keymaps para TermuxAI .
+require("config.fittencode-keys") -- Keymaps para Termux AI Autocomplete .
 require("config.keymaps.give-context") -- keymaps para utilidades IA  󰭹
 require("config.keymaps.close-buffers") -- keymaps para manipular buffers  .
 require("config.keymaps.open-explorer") -- keymaps para Abrir Explorer/CopyPaste  .
