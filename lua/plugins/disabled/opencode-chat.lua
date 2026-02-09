@@ -10,14 +10,14 @@ return {
     { "folke/snacks.nvim", opts = { input = {}, picker = {}, terminal = {} } },
   },
   keys = {
-    {
-      "<leader>aa",
-      function()
-        require("opencode").toggle()
-      end,
-      mode = { "n" },
-      desc = " 󰮮 Toggle OpenCode [Cli]",
-    },
+    -- {
+    --   "<leader>aa",
+    --   function()
+    --     require("opencode").toggle()
+    --   end,
+    --   mode = { "n" },
+    --   desc = " 󰮮 Toggle OpenCode [Cli]",
+    -- },
     {
       "<leader>ao",
       function()
