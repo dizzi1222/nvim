@@ -6,14 +6,17 @@ return {
     -- if you want to build from source then do `make BUILD_FROM_SOURCE=true`
     -- ⚠️ must add this setting! ! !
     build = function()
-      -- Verifica si los templates existen
-      local avante_dir = vim.fn.expand("~/.local/share/nvim/lazy/avante.nvim")
-      local templates_so = avante_dir .. "/dist/avante_templates.so"
+      -- Detecta sistema operativo
+      local is_win = vim.fn.has("win32") == 1
+      local data_dir = vim.fn.stdpath("data") -- Detecta path correcto automáticamente
+      local avante_dir = data_dir .. "/lazy/avante.nvim"
+      local lib_ext = is_win and ".dll" or ".so"
+      local templates_lib = avante_dir .. "/build/avante_templates" .. lib_ext
 
       -- Si faltan los templates, compila automáticamente
-      if vim.fn.filereadable(templates_so) == 0 then
-        if vim.fn.has("win32") == 1 then
-          return "powershell -ExecutionPolicy Bypass -File Build.ps1 -BuildFromSource false"
+      if vim.fn.filereadable(templates_lib) == 0 then
+        if is_win then
+          return "powershell -ExecutionPolicy Bypass -File Build.ps1"
         else
           return "make"
         end
@@ -122,19 +125,26 @@ return {
       -- Create autocmd group for resize fix AND template detection
       vim.api.nvim_create_augroup("AvanteResizeFix", { clear = true })
 
-      -- 🔨 Auto-compile templates si faltan
+      -- Auto-compile templates si faltan (cross-platform: Windows/Linux/WSL)
       vim.api.nvim_create_augroup("AvanteTemplateCheck", { clear = true })
       vim.api.nvim_create_autocmd("VimEnter", {
         group = "AvanteTemplateCheck",
         callback = function()
-          local avante_dir = vim.fn.expand("~/.local/share/nvim/lazy/avante.nvim")
-          local templates_so = avante_dir .. "/dist/avante_templates.so"
+          local is_win = vim.fn.has("win32") == 1
+          local data_dir = vim.fn.stdpath("data")
+          local avante_dir = data_dir .. "/lazy/avante.nvim"
+          local lib_ext = is_win and ".dll" or ".so"
+          local templates_lib = avante_dir .. "/build/avante_templates" .. lib_ext
 
           -- Si faltan los templates, compila automáticamente
-          if vim.fn.filereadable(templates_so) == 0 then
-            vim.notify("📦 Avante templates faltantes. Compilando automáticamente...", vim.log.levels.WARN)
-            vim.fn.system("cd " .. avante_dir .. " && bash build.sh")
-            vim.notify("✅ Avante compilado correctamente. Reinicia Neovim.", vim.log.levels.INFO)
+          if vim.fn.filereadable(templates_lib) == 0 then
+            vim.notify("Avante templates faltantes. Compilando...", vim.log.levels.WARN)
+            if is_win then
+              vim.fn.system('powershell -ExecutionPolicy Bypass -File "' .. avante_dir .. '/Build.ps1"')
+            else
+              vim.fn.system("cd " .. avante_dir .. " && make")
+            end
+            vim.notify("Avante compilado. Reinicia Neovim.", vim.log.levels.INFO)
           end
         end,
       })
@@ -264,7 +274,7 @@ return {
             priority = 1,
             endpoint = "https://api.anthropic.com",
             model = "claude-sonnet-4-20250514", -- O;  claude-3-5-haiku-20241022 / "claude-3-5-sonnet-20241022" / claude-3-opus-20240229 -- Modelo actualizado
-            auth_type = "max", -- 🔥 Usa tu suscripción >>> [NO REQUIERE API KEY, CLAUDE CODE] 🐐.
+            -- auth_type = "max", -- NO FUNCIONA OAUTH EN WSL 💀 -|- 🔥 Usa tu suscripción >>> [NO REQUIERE API KEY, CLAUDE CODE] 🐐.
             timeout = 30000,
             -- api_key_name = "ANTHROPIC_API_KEY", --  🔥 Desactivalo si usas suscripción  󰀦
             mode = "agentic", -- USA Tools para Claude

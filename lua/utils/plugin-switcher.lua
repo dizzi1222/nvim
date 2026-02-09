@@ -21,16 +21,23 @@ local PLUGINS_CONFIG = {
     file = "code-companion.lua",
     category = "AI Assistant",
   },
-  fittencode = {
-    name = "FittenCode",
-    icon = "",
-    file = "ai-fittencode.lua",
-    category = "AI Assistant",
-  },
   gemini_cli = {
     name = "Gemini CLI",
     icon = "󰊭",
     file = "gemini-cli.lua",
+    category = "AI Assistant",
+  },
+  crawbot_open = {
+    name = "Crawbot Open",
+    icon = "󰧑",
+    file = "openclaw.lua",
+    category = "AI Assistant",
+  },
+  -- Antigravity-copilot.lua - [Funciona en modo NORMAL]
+  antigravity_copilot = {
+    name = "Copilot NES",
+    icon = "󰯈",
+    file = "Antigravity-copilot.lua",
     category = "AI Assistant",
   },
 
@@ -61,6 +68,12 @@ local PLUGINS_CONFIG = {
     category = "AI Completion",
   },
 
+  fittencode = {
+    name = "FittenCode",
+    icon = "",
+    file = "ai-fittencode.lua",
+    category = "AI Completion",
+  },
   -- 🎮 OpenCode variants
   opencode = {
     name = "OpenCode (sudo-tee)",

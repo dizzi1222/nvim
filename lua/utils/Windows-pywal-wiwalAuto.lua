@@ -17,10 +17,9 @@ function M.setup()
   -- FUNCIÓN PARA WINDOWS (PowerShell)
   -- ================================================
   local function update_pywal_windows()
-    -- Ejecutar WalManager en PowerShell (oculto)
-    vim.cmd([[!start /B pwsh -NonInteractive -WindowStyle Hidden -Command "uwal -y"]])
-    -- vim.notify("🎨 Actualizando colores (Windows PowerShell)", vim.log.levels.INFO)
-    -- Aca abajo se debe triggear el elif unix (linux) DE API KEYS: ubicado en: $HOME/.api-keys.sh
+    -- Ejecutar WalManager en PowerShell (oculto, compatible con shell=pwsh)
+    vim.fn.jobstart({ "cmd", "pwsh", "-NoProfile", "-Command", "uwal -y" }, { detach = true })
+    -- usando cmd /c para invocar pwsh en una terminal aparte
   end
 
   -- ================================================
