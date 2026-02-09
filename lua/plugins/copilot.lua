@@ -127,7 +127,7 @@ return {
     -- Toggle Copilot
     vim.keymap.set("n", "<leader>ct", ":Copilot toggle<CR>", { noremap = true, desc = "Copilot toggle" })
 
-    print("✅ Copilot Unificado cargado (Inline + NES)")
+    -- print("✅ Copilot Unificado cargado (Inline + NES)")
   end,
 
   init = function()
