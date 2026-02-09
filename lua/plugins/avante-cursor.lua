@@ -274,9 +274,9 @@ return {
             priority = 1,
             endpoint = "https://api.anthropic.com",
             model = "claude-sonnet-4-20250514", -- O;  claude-3-5-haiku-20241022 / "claude-3-5-sonnet-20241022" / claude-3-opus-20240229 -- Modelo actualizado
-            -- auth_type = "max", -- NO FUNCIONA OAUTH EN WSL 💀 -|- 🔥 Usa tu suscripción >>> [NO REQUIERE API KEY, CLAUDE CODE] 🐐.
+            auth_type = "max", -- NO FUNCIONA OAUTH EN WSL 💀 -|- 🔥 Usa tu suscripción >>> [NO REQUIERE API KEY, CLAUDE CODE] 🐐.
             timeout = 30000,
-            -- api_key_name = "ANTHROPIC_API_KEY", --  🔥 Desactivalo si usas suscripción  󰀦
+            api_key_name = "ANTHROPIC_API_KEY", --  🔥 Desactivalo si usas suscripción  󰀦
             mode = "agentic", -- USA Tools para Claude
             disable_tools = true, -- 🔥 Agregar esto
             -- ✅ Usar extra_request_body para evitar warnings
