@@ -46,7 +46,7 @@ return {
     enabled = true,
   },
   {
-    "supermaven-nvim", -- 9/10 | Codeium: 2/10
+    "supermaven-inc/supermaven-nvim", -- 9/10 | Codeium: 2/10
     enabled = true, -- Muy buen autocompletado, aunque le falte contexto general, recuerda conversaciones pasadas. GRATIS
   },
   -- {
