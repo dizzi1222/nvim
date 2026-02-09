@@ -47,39 +47,37 @@ return {
         desc = "🔍 [FZF] Config Files",
       },
     },
-    config = function()
-      require("fzf-lua").setup({
-        files = {
-          fd_opts = "--color=never --type f --hidden --follow "
-            .. "--exclude .git --exclude node_modules --exclude no_repo "
-            .. "--exclude .cache --exclude .vscode-server --exclude '*.log'",
+    opts = {
+      files = {
+        fd_opts = "--color=never --type f --hidden --follow "
+          .. "--exclude .git --exclude node_modules --exclude no_repo "
+          .. "--exclude .cache --exclude .vscode-server --exclude '*.log'",
+      },
+      grep = {
+        rg_opts = "--column --line-number --no-heading --color=always --smart-case "
+          .. "--glob '!.git' --glob '!node_modules' --glob '!no_repo' "
+          .. "--glob '!.cache' --glob '!.vscode-server' -e",
+      },
+      winopts = {
+        height = 0.85,
+        width = 0.95,
+        row = 0.35,
+        col = 0.5,
+        border = "single",
+        preview = {
+          scrollbar = "float",
+          layout = "horizontal",
         },
-        grep = {
-          rg_opts = "--column --line-number --no-heading --color=always --smart-case "
-            .. "--glob '!.git' --glob '!node_modules' --glob '!no_repo' "
-            .. "--glob '!.cache' --glob '!.vscode-server' -e",
+      },
+      keymap = {
+        builtin = {
+          ["<C-f>"] = "toggle-fullscreen",
+          ["<C-q>"] = "select-all+accept",
+          ["<C-t>"] = "tab",
+          ["<C-x>"] = "split",
+          ["<C-v>"] = "vsplit",
         },
-        winopts = {
-          height = 0.85,
-          width = 0.95,
-          row = 0.35,
-          col = 0.5,
-          border = "single",
-          preview = {
-            scrollbar = "float",
-            layout = "horizontal",
-          },
-        },
-        keymap = {
-          builtin = {
-            ["<C-f>"] = "toggle-fullscreen",
-            ["<C-q>"] = "select-all+accept",
-            ["<C-t>"] = "tab",
-            ["<C-x>"] = "split",
-            ["<C-v>"] = "vsplit",
-          },
-        },
-      })
-    end,
+      },
+    },
   },
 }
