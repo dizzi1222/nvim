@@ -192,6 +192,23 @@ vim.opt.ttimeoutlen = 0
 --   end,
 -- })
 
+-- FEATURE: n2 - 2.0: Auto-sync opencode-nick si faltan módulos
+vim.api.nvim_create_autocmd("User", {
+  pattern = "LazyDone",
+  callback = function()
+    local data_dir = vim.fn.stdpath("data")
+    local opencode_dir = data_dir .. "/lazy/opencode-nick"
+    local keymaps_file = opencode_dir .. "/lua/opencode/keymaps.lua"
+    local promise_file = opencode_dir .. "/lua/opencode/promise.lua"
+
+    -- Si faltan los módulos críticos, sincroniza desde lazy
+    if vim.fn.filereadable(keymaps_file) == 0 or vim.fn.filereadable(promise_file) == 0 then
+      vim.notify("opencode-nick: Faltaban módulos. Sincronizando...", vim.log.levels.WARN)
+      require("lazy").sync({ names = { "opencode-nick" } })
+    end
+  end,
+})
+
 -- FEATURE n3 - 3.0: Plugin Switcher (toggle Avante, Copilot, etc)
 vim.keymap.set("n", "<leader>aD", function()
   require("utils.plugin-switcher").interactive_toggle()
