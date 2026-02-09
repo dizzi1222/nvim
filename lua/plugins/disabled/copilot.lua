@@ -1,41 +1,33 @@
--- copilot.lua con NES + autocompletado inline
+-- 🐐🗣️🔥️✍️ NO REQUIERE API  USA:Copilot auth  | AUTOCOMPLETADO 󰄭 .
 return {
   "zbirenbaum/copilot.lua",
-  dependencies = {
-    "copilotlsp-nvim/copilot-lsp", -- NES
-  },
-  event = "InsertEnter",
-  config = function()
+  optional = true,
+  opts = function()
     require("copilot").setup({
-      -- ✅ Autocompletado inline tradicional (modo Insert)
       suggestion = {
-        enabled = true, -- Inline en Insert
         auto_trigger = true,
         keymap = {
-          accept = "<Tab>", -- Tab en INSERT
-          accept_word = "<C-Enter>",
-          accept_line = "<C-j>",
-          dismiss = "<C-]>",
+          accept = "<Tab>", -- acepta sugerencia
+          -- suggestion_color = { gui = "#caa99b", cterm = 244 }, -- #808080
+          dismiss = "<C-]>", -- cierra sugerencia
+          accept_word = "<C-Enter>", -- antes estaba como C-j
         },
       },
-
-      -- ✅ NES predictivo (modo Normal)
-      nes = {
-        enabled = true,
-        keymap = {
-          accept_and_goto = "<leader>p", -- Normal mode
-          dismiss = "<Esc>",
-        },
-      },
-
-      server_opts_overrides = {
-        settings = {
-          advanced = {
-            inlineSuggestCount = 5,
-          },
-        },
+      filetypes = {
+        yaml = false,
+        markdown = false,
+        help = false,
+        gitcommit = false,
+        gitrebase = false,
+        hgcommit = false,
+        svn = false,
+        cvs = false,
+        -- poner true para filetypes donde quieras AI
+        lua = true,
+        python = true,
+        javascript = true,
+        typescript = true,
       },
     })
   end,
 }
-
