@@ -37,7 +37,7 @@ local PLUGINS_CONFIG = {
   antigravity_copilot = {
     name = "Copilot NES",
     icon = "󰯈",
-    file = "Antigravity-copilot.lua",
+    file = "copilotlsp-nvim/copilot-lsp", -- "Antigravity-copilot.lua"
     category = "AI Assistant",
   },
 
