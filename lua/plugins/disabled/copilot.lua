@@ -1,137 +1,67 @@
--- 🐐 Copilot UNIFICADO: Sugerencias Inline + NES Predictivo
--- Autocompletado en INSERT + Líneas verdes NES en NORMAL
-
+-- Copilot: Sugerencias inline (INSERT con Tab) + NES lineas verdes predictivas (NORMAL con Tab)
 return {
   "zbirenbaum/copilot.lua",
   dependencies = {
-    "copilotlsp-nvim/copilot-lsp", -- NES predictivo (líneas verdes)
+    "copilotlsp-nvim/copilot-lsp", -- NES predictivo (lineas verdes en NORMAL)
   },
-  event = "InsertEnter",
+  event = "VeryLazy", -- NO InsertEnter, NES necesita cargar antes para funcionar en NORMAL
   config = function()
-    -- ═══════════════════════════════════════════════════════════
-    -- COPILOT.LUA: Sugerencias inline en INSERT
-    -- ═══════════════════════════════════════════════════════════
     require("copilot").setup({
+      -- Autocompletado inline en INSERT
       suggestion = {
         enabled = true,
         auto_trigger = true,
         debounce = 75,
         keymap = {
-          accept = "<Tab>", -- Tab para aceptar en INSERT
-          accept_word = "<C-Right>", -- Aceptar palabra
-          accept_line = "<C-j>", -- Aceptar línea completa
-          dismiss = "<C-]>", -- Rechazar sugerencia
-          next = "<M-]>", -- Siguiente sugerencia
-          prev = "<M-[>", -- Sugerencia anterior
+          accept = "<Tab>",
+          accept_word = "<C-Right>",
+          accept_line = "<C-j>",
+          dismiss = "<C-]>",
+          next = "<M-]>",
+          prev = "<M-[>",
         },
       },
-
-      panel = {
-        enabled = true,
-        auto_refresh = false,
-        keymap = {
-          jump_prev = "[[",
-          jump_next = "]]",
-          accept = "<CR>",
-          refresh = "gr",
-          open = "<M-CR>",
-        },
-        layout = {
-          position = "bottom", -- top | bottom | left | right
-          ratio = 0.4,
-        },
-      },
-
-      filetypes = {
-        -- Deshabilitados en ciertos tipos de archivo
-        yaml = false,
-        markdown = false,
-        help = false,
-        gitcommit = false,
-        gitrebase = false,
-        hgcommit = false,
-        svn = false,
-        cvs = false,
-
-        -- Habilitados (agregar más si quieres)
-        lua = true,
-        python = true,
-        javascript = true,
-        typescript = true,
-        rust = true,
-        go = true,
-        bash = true,
-        sh = true,
-        zsh = true,
-      },
-
+      panel = { enabled = false },
       server_opts_overrides = {
         settings = {
           advanced = {
-            inlineSuggestCount = 3, -- Número de sugerencias
-            listCount = 10, -- Tamaño de lista
-            authProvider = "github",
+            inlineSuggestCount = 3,
           },
         },
       },
     })
 
-    -- ═══════════════════════════════════════════════════════════
-    -- COPILOT-LSP: NES Predictivo (Líneas verdes en NORMAL)
-    -- ═══════════════════════════════════════════════════════════
+    -- NES: Lineas verdes predictivas en NORMAL (tipo Cursor/VSCode/Antigravity)
     vim.g.copilot_nes_debounce = 500
 
-    -- Tab en NORMAL: acepta NES predictivo o fallback a C-i
+    -- Tab en NORMAL: acepta NES o fallback a C-i
     vim.keymap.set("n", "<Tab>", function()
-      local nes = require("copilot-lsp.nes")
-      -- Si hay NES disponible, aplicarlo
-      if nes.apply_pending_nes() then
+      local ok, nes = pcall(require, "copilot-lsp.nes")
+      if ok and nes.apply_pending_nes() then
         nes.walk_cursor_end_edit()
         return nil
-      else
-        -- Fallback: C-i (jump forward en buffer)
-        return "<C-i>"
       end
-    end, { expr = true, noremap = true, desc = "Accept Copilot NES or C-i" })
+      return "<C-i>"
+    end, { expr = true, noremap = true, desc = "NES: Aceptar o C-i" })
 
     -- Esc en NORMAL: limpiar NES o nohlsearch
     vim.keymap.set("n", "<Esc>", function()
-      local nes = require("copilot-lsp.nes")
-      if not nes.clear() then
-        vim.cmd("nohlsearch")
+      local ok, nes = pcall(require, "copilot-lsp.nes")
+      if ok and nes.clear() then
+        return
       end
-    end, { noremap = true, desc = "Clear NES or nohlsearch" })
+      vim.cmd("nohlsearch")
+    end, { noremap = true, desc = "NES: Limpiar o nohlsearch" })
 
-    -- Leader+p: aceptar y mover cursor (alternativa)
-    vim.keymap.set("n", "<leader>p", function()
-      local nes = require("copilot-lsp.nes")
-      nes.apply_pending_nes()
-      nes.walk_cursor_end_edit()
-    end, { noremap = true, desc = "Accept NES and move cursor" })
-
-    -- Shift+Tab: rechazar NES
+    -- S-Tab en NORMAL: rechazar NES
     vim.keymap.set("n", "<S-Tab>", function()
-      require("copilot-lsp.nes").clear()
-    end, { noremap = true, desc = "Reject NES" })
-
-    -- ═══════════════════════════════════════════════════════════
-    -- PANEL Y COMANDOS
-    -- ═══════════════════════════════════════════════════════════
-
-    -- Panel de Copilot (mostrar todas las sugerencias)
-    vim.keymap.set("n", "<leader>cp", ":Copilot panel<CR>", { noremap = true, desc = "Copilot panel" })
-
-    -- Autenticar con GitHub
-    vim.keymap.set("n", "<leader>ca", ":Copilot auth<CR>", { noremap = true, desc = "Copilot auth" })
-
-    -- Toggle Copilot
-    vim.keymap.set("n", "<leader>ct", ":Copilot toggle<CR>", { noremap = true, desc = "Copilot toggle" })
-
-    -- print("✅ Copilot Unificado cargado (Inline + NES)")
+      local ok, nes = pcall(require, "copilot-lsp.nes")
+      if ok then nes.clear() end
+    end, { noremap = true, desc = "NES: Rechazar" })
   end,
 
   init = function()
-    -- Habilitar Copilot LSP al inicio
+    -- Habilitar Copilot LSP al inicio (necesario para NES)
     if pcall(require, "copilot-lsp") then
       vim.lsp.enable("copilot_ls")
     end
