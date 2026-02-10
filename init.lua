@@ -179,20 +179,7 @@ end
 vim.opt.timeoutlen = 1000
 vim.opt.ttimeoutlen = 0
 
--- FEATURE: n1 - 1.0:  Avante con Ollama Permanente Forzar Cloud  .
--- vim.api.nvim_create_autocmd("User", {
---   pattern = "LazyLoad",
---   callback = function(event)
---     if event.data == "avante.nvim" then
---       -- Espera un momento a que Avante cargue completamente
---       vim.defer_fn(function()
---         vim.cmd("silent! AvanteSwitchProvider ollama")
---       end, 100)
---     end
---   end,
--- })
-
--- FEATURE: n2 - 2.0: Auto-sync opencode-nick si faltan módulos
+-- FEATURE: n1 - 2.0: Auto-sync opencode-nick si faltan módulos
 vim.api.nvim_create_autocmd("User", {
   pattern = "LazyDone",
   callback = function()
@@ -215,12 +202,12 @@ vim.api.nvim_create_autocmd("User", {
   end,
 })
 
--- FEATURE n3 - 3.0: Plugin Switcher (toggle Avante, Copilot, etc)
+-- FEATURE n2 - 3.0: Plugin Switcher (toggle Avante, Copilot, etc)
 vim.keymap.set("n", "<leader>aD", function()
   require("utils.plugin-switcher").interactive_toggle()
 end, { desc = "🔌 Toggle Plugins (Opencode/Avante/Claude/etc)" })
 
--- IA n5 - 3.0: Plugin Switcher (toggle Avante, Copilot, etc)
+-- IA n3 - 3.0: Plugin Switcher (toggle Avante, Copilot, etc)
 vim.keymap.set("n", "<leader>D", function()
   require("utils.plugin-switcher").interactive_toggle()
 end, { desc = "🔌 Toggle Plugins (Opencode/Avante/Claude/etc)" })
