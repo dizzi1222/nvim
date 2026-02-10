@@ -239,7 +239,7 @@ return {
             endpoint = "https://generativelanguage.googleapis.com/v1beta/openai/",
             model = "gemini-2.0-flash-exp", -- ✅ Modelo correcto para API OpenAI-compatible
             timeout = 30000,
-            mode = "legacy",
+            mode = "agentic",
             disable_tools = true, -- 🔥 Agregar esto
           },
           --  GEMINI - API gratuita 💸🐐
