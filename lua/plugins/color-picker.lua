@@ -1,6 +1,6 @@
 return {
   "eero-lehtinen/oklch-color-picker.nvim",
--- ✅ Auto-deshabilitar en Android/Termux
+  -- ✅ Auto-deshabilitar en Android/Termux
   enabled = vim.fn.isdirectory("/data/data/com.termux") == 0,
   cond = function()
     -- Solo cargar si:
@@ -10,13 +10,13 @@ return {
     if is_termux then
       return false
     end
-    
+
     -- En WSL, verificar que el .exe existe
     if vim.fn.has("wsl") == 1 then
       local picker_path = "/mnt/c/Users/Diego/AppData/Local/nvim-data/oklch-color-picker/oklch-color-picker.exe"
       return vim.fn.filereadable(picker_path) == 1
     end
-    
+
     return true
   end,
   event = "VeryLazy",

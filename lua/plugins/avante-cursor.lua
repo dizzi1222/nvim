@@ -1,27 +1,11 @@
 -- 💸💳💰REQUIERE API. USA : AvanteSwitchProvider ollama | consigue tu key en https://www.avantelabs.ai (MEJOR QUE CURSOR)
---  Puedes hacer el trucazo de usar OLLAMA local cloud con API gratuita.🐐
+--  Puedes hacer el trucazo de usar OLLAMA local cloud con API gratuita.🐐 Talke asi [Lineas: 35]:
 return {
   {
     "yetone/avante.nvim",
     -- if you want to build from source then do `make BUILD_FROM_SOURCE=true`
     -- ⚠️ must add this setting! ! !
-    build = function()
-      -- Detecta sistema operativo
-      local is_win = vim.fn.has("win32") == 1
-      local data_dir = vim.fn.stdpath("data") -- Detecta path correcto automáticamente
-      local avante_dir = data_dir .. "/lazy/avante.nvim"
-      local lib_ext = is_win and ".dll" or ".so"
-      local templates_lib = avante_dir .. "/build/avante_templates" .. lib_ext
-
-      -- Si faltan los templates, compila automáticamente
-      if vim.fn.filereadable(templates_lib) == 0 then
-        if is_win then
-          return "powershell -ExecutionPolicy Bypass -File Build.ps1"
-        else
-          return "make"
-        end
-      end
-    end,
+    build = vim.fn.has("win32") == 1 and "powershell -ExecutionPolicy Bypass -File Build.ps1" or "make",
     event = "VeryLazy",
     version = false, -- Never set this value to "*"! Never!
     ---@module 'avante'
@@ -45,6 +29,11 @@ return {
         end
         return false
       end
+
+      -- feature n2: Auto-switch a Ollama (provider gratuito por defecto)
+      vim.defer_fn(function()
+        pcall(vim.cmd, "silent! AvanteSwitchProvider claude") -- O Ollama/gemini-cli
+      end, 500)
 
       -- Temporarily move cursor away from avante during resize
       local function temporarily_leave_avante()
@@ -122,32 +111,22 @@ return {
         end
       end
 
-      -- Create autocmd group for resize fix AND template detection
+      -- Detectar OS (usado por feature n1, n2 y config de claude)
+      local is_win = vim.fn.has("win32") == 1
+      local is_wsl = vim.fn.has("wsl") == 1
+
+      -- feature n1: Detectar si faltan avante_templates y auto-build (Windows: .dll, Linux/WSL: .so)
+      local lib_ext = is_win and ".dll" or ".so"
+      local templates_lib = vim.fn.stdpath("data") .. "/lazy/avante.nvim/build/avante_templates" .. lib_ext
+      if vim.fn.filereadable(templates_lib) == 0 then
+        vim.notify("Avante templates faltantes. Compilando...", vim.log.levels.WARN)
+        vim.defer_fn(function()
+          vim.cmd("Lazy build avante.nvim")
+        end, 1000)
+      end
+
+      -- Create autocmd group for resize fix
       vim.api.nvim_create_augroup("AvanteResizeFix", { clear = true })
-
-      -- Auto-compile templates si faltan (cross-platform: Windows/Linux/WSL)
-      vim.api.nvim_create_augroup("AvanteTemplateCheck", { clear = true })
-      vim.api.nvim_create_autocmd("VimEnter", {
-        group = "AvanteTemplateCheck",
-        callback = function()
-          local is_win = vim.fn.has("win32") == 1
-          local data_dir = vim.fn.stdpath("data")
-          local avante_dir = data_dir .. "/lazy/avante.nvim"
-          local lib_ext = is_win and ".dll" or ".so"
-          local templates_lib = avante_dir .. "/build/avante_templates" .. lib_ext
-
-          -- Si faltan los templates, compila automáticamente
-          if vim.fn.filereadable(templates_lib) == 0 then
-            vim.notify("Avante templates faltantes. Compilando...", vim.log.levels.WARN)
-            if is_win then
-              vim.fn.system('powershell -ExecutionPolicy Bypass -File "' .. avante_dir .. '/Build.ps1"')
-            else
-              vim.fn.system("cd " .. avante_dir .. " && make")
-            end
-            vim.notify("Avante compilado. Reinicia Neovim.", vim.log.levels.INFO)
-          end
-        end,
-      })
 
       -- Main resize handler for Resize
       vim.api.nvim_create_autocmd({ "VimResized" }, {
@@ -228,7 +207,7 @@ return {
             endpoint = "127.0.0.1:11434", -- Sin /v1
             model = "deepseek-v3.2:cloud", -- Tu modeloAvanteSwitchProvider deepseek
             timeout = 30000,
-            mode = "legacy", -- ✅ CRÍTICO, "agentic" causa crashes
+            mode = "agentic", -- ✅ CRÍTICO, "agentic" permite ejecutar BASH, legacy menos errores (tomo el riesgo).
             disable_tools = true, -- 🔥 Agregar esto
             -- api_key_name = "OLLAMA-API-KEY", -- NO necesitas api_key_name para Ollama local
           },
@@ -270,13 +249,29 @@ return {
           },
 
           --  CLAUDE - Pago 💀☠️ (SIN deprecated warnings)
+          -- Linux nativo: auth_type "max" (usa suscripcion, sin API key)
+          -- Windows/WSL: api_key_name (OAuth no funciona en Windows/WSL)
           claude = {
             priority = 1,
             endpoint = "https://api.anthropic.com",
-            model = "claude-sonnet-4-20250514", -- O;  claude-3-5-haiku-20241022 / "claude-3-5-sonnet-20241022" / claude-3-opus-20240229 -- Modelo actualizado
-            auth_type = "max", -- NO FUNCIONA OAUTH EN WSL 💀 -|- 🔥 Usa tu suscripción >>> [NO REQUIERE API KEY, CLAUDE CODE] 🐐.
+            model = "claude-sonnet-4-20250514",
+            -- ╔══════════════════════════════════════════════════════════════════════╗
+            -- PARA ACTIVARLO A NIVEL GLOBAL:
+            -- ╚══════════════════════════════════════════════════════════════════════╝
+            -- auth_type = "max", -- NO FUNCIONA OAUTH EN WSL 💀 -|- 🔥 Usa tu suscripción >>> [NO REQUIERE API KEY, CLAUDE CODE] 🐐.
+            -- ╔══════════════════════════════════════════════════════════════════════╗
+            -- EN CAMBIO USA ESTO PARA SOLO EN LINUX
+            -- ╚══════════════════════════════════════════════════════════════════════╝
+            auth_type = (not is_win and not is_wsl) and "max" or nil,
             timeout = 30000,
-            api_key_name = "ANTHROPIC_API_KEY", --  🔥 Desactivalo si usas suscripción  󰀦
+            -- ╔══════════════════════════════════════════════════════════════════════╗
+            -- PARA ACTIVARLO A NIVEL GLOBAL:
+            -- ╚══════════════════════════════════════════════════════════════════════╝
+            -- api_key_name = "ANTHROPIC_API_KEY", --  🔥 Desactivalo si usas suscripción  󰀦
+            -- ╔══════════════════════════════════════════════════════════════════════╗
+            -- EN CAMBIO USA ESTO PARA SOLO EN WINDOWs/WSL
+            -- ╚══════════════════════════════════════════════════════════════════════╝
+            api_key_name = (is_win or is_wsl) and "ANTHROPIC_API_KEY" or nil,
             mode = "agentic", -- USA Tools para Claude
             disable_tools = true, -- 🔥 Agregar esto
             -- ✅ Usar extra_request_body para evitar warnings
