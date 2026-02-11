@@ -111,12 +111,14 @@ return {
         end
       end
 
-      -- Detectar OS (usado por feature n1, n2 y config de claude)
-      local is_win = vim.fn.has("win32") == 1
+      -- 🖥️ Detección de OS simplificada y eficaz
       local is_wsl = vim.fn.has("wsl") == 1
+      local is_windows = vim.fn.has("win32") == 1 or vim.fn.has("win64") == 1
+      local is_linux = vim.fn.has("unix") == 1 and not is_wsl
+      local is_termux = vim.fn.isdirectory("/data/data/com.termux") == 1
 
       -- feature n1: Detectar si faltan avante_templates y auto-build (Windows: .dll, Linux/WSL: .so)
-      local lib_ext = is_win and ".dll" or ".so"
+      local lib_ext = is_windows and ".dll" or ".so"
       local templates_lib = vim.fn.stdpath("data") .. "/lazy/avante.nvim/build/avante_templates" .. lib_ext
       if vim.fn.filereadable(templates_lib) == 0 then
         vim.notify("Avante templates faltantes. Compilando...", vim.log.levels.WARN)
@@ -251,35 +253,51 @@ return {
           --  CLAUDE - Pago 💀☠️ (SIN deprecated warnings)
           -- Linux nativo: auth_type "max" (usa suscripcion, sin API key)
           -- Windows/WSL: api_key_name (OAuth no funciona en Windows/WSL)
-          claude = {
-            priority = 1,
-            endpoint = "https://api.anthropic.com",
-            model = "claude-sonnet-4-20250514",
+          --
+          claude = (function()
+            local base = {
+              priority = 1,
+              endpoint = "https://api.anthropic.com",
+              -- ╔══════════════════════════════════════════════════════════════════════╗
+              -- PARA ACTIVARLO A NIVEL GLOBAL:- OPCION 1
+              -- ╚══════════════════════════════════════════════════════════════════════╝
+              -- auth_type = "max", -- NO FUNCIONA OAUTH EN WSL 💀 -|- 🔥 Usa tu suscripción >>> [NO REQUIERE API KEY, CLAUDE CODE] 🐐.
+              -- ╔══════════════════════════════════════════════════════════════════════╗
+              -- PARA ACTIVARLO A NIVEL GLOBAL: - OPCION 2
+              -- ╚══════════════════════════════════════════════════════════════════════╝
+              -- api_key_name = "ANTHROPIC_API_KEY", --  🔥 Desactivalo si usas suscripción  󰀦
+              model = "claude-sonnet-4-20250514",
+              timeout = 30000,
+              mode = "agentic",
+              disable_tools = true,
+              extra_request_body = {
+                temperature = 0.75,
+                max_tokens = 4096,
+              },
+            }
+
+            -- Linux nativo: usa suscripción (sin API key)
             -- ╔══════════════════════════════════════════════════════════════════════╗
-            -- PARA ACTIVARLO A NIVEL GLOBAL:
+            -- EN CAMBIO USA ESTO PARA SOLO EN LINUX: - OPCION 1
             -- ╚══════════════════════════════════════════════════════════════════════╝
-            -- auth_type = "max", -- NO FUNCIONA OAUTH EN WSL 💀 -|- 🔥 Usa tu suscripción >>> [NO REQUIERE API KEY, CLAUDE CODE] 🐐.
+            if is_linux then
+              base.auth_type = "max"
+              return base
+            end
+
             -- ╔══════════════════════════════════════════════════════════════════════╗
-            -- EN CAMBIO USA ESTO PARA SOLO EN LINUX
+            -- EN CAMBIO USA ESTO PARA SOLO EN WINDOWs/WSL: - OPCION 2
             -- ╚══════════════════════════════════════════════════════════════════════╝
-            auth_type = (not is_win and not is_wsl) and "max" or nil,
-            timeout = 30000,
-            -- ╔══════════════════════════════════════════════════════════════════════╗
-            -- PARA ACTIVARLO A NIVEL GLOBAL:
-            -- ╚══════════════════════════════════════════════════════════════════════╝
-            -- api_key_name = "ANTHROPIC_API_KEY", --  🔥 Desactivalo si usas suscripción  󰀦
-            -- ╔══════════════════════════════════════════════════════════════════════╗
-            -- EN CAMBIO USA ESTO PARA SOLO EN WINDOWs/WSL
-            -- ╚══════════════════════════════════════════════════════════════════════╝
-            api_key_name = (is_win or is_wsl) and "ANTHROPIC_API_KEY" or nil,
-            mode = "agentic", -- USA Tools para Claude
-            disable_tools = true, -- 🔥 Agregar esto
-            -- ✅ Usar extra_request_body para evitar warnings
-            extra_request_body = {
-              temperature = 0.75,
-              max_tokens = 4096, -- Lo baje de 20480
-            },
-          },
+            -- Windows/WSL: usa API key
+            if is_windows or is_wsl then
+              base.api_key_name = "ANTHROPIC_API_KEY"
+              return base
+            end
+
+            -- Fallback (Termux u otros)
+            base.api_key_name = "ANTHROPIC_API_KEY"
+            return base
+          end)(),
 
           --   COPILOT - Pago 💀☠️
           copilot = {

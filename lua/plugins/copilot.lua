@@ -1,4 +1,5 @@
 -- Copilot: Sugerencias inline (INSERT con Tab) + NES lineas verdes predictivas (NORMAL con Tab)
+-- Configuración inspirada en
 return {
   "zbirenbaum/copilot.lua",
   dependencies = {
@@ -21,7 +22,16 @@ return {
           prev = "<M-[>",
         },
       },
-      panel = { enabled = false },
+      panel = {
+        enabled = true, -- Panel lateral con sugerencias alternativas (como el de VSCode)
+        keymap = {
+          -- jump_prev = "[[",
+          -- jump_next = "]]",
+          -- accept = "<CR>",
+          -- refresh = "gr",
+          open = "<C-g>",
+        },
+      },
       server_opts_overrides = {
         settings = {
           advanced = {
@@ -29,6 +39,19 @@ return {
           },
         },
       },
+    })
+
+    -- 🔥 Desactivar Copilot en buffers sin archivo (como Avante, terminal, etc)
+    vim.api.nvim_create_autocmd("BufEnter", {
+      callback = function()
+        local buf_name = vim.api.nvim_buf_get_name(0)
+        if buf_name == "" then
+          -- Desactivar en buffers temporales (Avante, terminal, etc)
+          vim.cmd("Copilot disable")
+        else
+          vim.cmd("Copilot enable")
+        end
+      end,
     })
 
     -- NES: Lineas verdes predictivas en NORMAL (tipo Cursor/VSCode/Antigravity)
@@ -56,7 +79,9 @@ return {
     -- S-Tab en NORMAL: rechazar NES
     vim.keymap.set("n", "<S-Tab>", function()
       local ok, nes = pcall(require, "copilot-lsp.nes")
-      if ok then nes.clear() end
+      if ok then
+        nes.clear()
+      end
     end, { noremap = true, desc = "NES: Rechazar" })
   end,
 
