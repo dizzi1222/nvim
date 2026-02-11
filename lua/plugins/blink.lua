@@ -1,5 +1,6 @@
 return {
   "saghen/blink.cmp",
+  version = "1.*", -- Usa binarios precompilados
   lazy = true,
   dependencies = { "saghen/blink.compat" },
   opts = {
