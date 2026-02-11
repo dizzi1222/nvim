@@ -253,51 +253,28 @@ return {
           --  CLAUDE - Pago 💀☠️ (SIN deprecated warnings)
           -- Linux nativo: auth_type "max" (usa suscripcion, sin API key)
           -- Windows/WSL: api_key_name (OAuth no funciona en Windows/WSL)
-          --
-          claude = (function()
-            local base = {
-              priority = 1,
-              endpoint = "https://api.anthropic.com",
-              -- ╔══════════════════════════════════════════════════════════════════════╗
-              -- PARA ACTIVARLO A NIVEL GLOBAL:- OPCION 1
-              -- ╚══════════════════════════════════════════════════════════════════════╝
-              -- auth_type = "max", -- NO FUNCIONA OAUTH EN WSL 💀 -|- 🔥 Usa tu suscripción >>> [NO REQUIERE API KEY, CLAUDE CODE] 🐐.
-              -- ╔══════════════════════════════════════════════════════════════════════╗
-              -- PARA ACTIVARLO A NIVEL GLOBAL: - OPCION 2
-              -- ╚══════════════════════════════════════════════════════════════════════╝
-              -- api_key_name = "ANTHROPIC_API_KEY", --  🔥 Desactivalo si usas suscripción  󰀦
-              model = "claude-sonnet-4-20250514",
-              timeout = 30000,
-              mode = "agentic",
-              disable_tools = true,
-              extra_request_body = {
-                temperature = 0.75,
-                max_tokens = 4096,
-              },
-            }
-
-            -- Linux nativo: usa suscripción (sin API key)
+          claude = {
+            priority = 1,
+            endpoint = "https://api.anthropic.com",
+            model = "claude-sonnet-4-20250514",
+            timeout = 30000,
             -- ╔══════════════════════════════════════════════════════════════════════╗
-            -- EN CAMBIO USA ESTO PARA SOLO EN LINUX: - OPCION 1
+            -- EN CAMBIO USA ESTO PARA SOLO EN LINUX
             -- ╚══════════════════════════════════════════════════════════════════════╝
-            if is_linux then
-              base.auth_type = "max"
-              return base
-            end
-
+            auth_type = is_linux and "max" or nil, -- NO FUNCIONA OAUTH EN WSL 💀
             -- ╔══════════════════════════════════════════════════════════════════════╗
-            -- EN CAMBIO USA ESTO PARA SOLO EN WINDOWs/WSL: - OPCION 2
+            -- PARA ACTIVARLO A NIVEL GLOBAL:
+            -- auth_type = "max",
             -- ╚══════════════════════════════════════════════════════════════════════╝
-            -- Windows/WSL: usa API key
-            if is_windows or is_wsl then
-              base.api_key_name = "ANTHROPIC_API_KEY"
-              return base
-            end
-
-            -- Fallback (Termux u otros)
-            base.api_key_name = "ANTHROPIC_API_KEY"
-            return base
-          end)(),
+            api_key_name = "ANTHROPIC_API_KEY", --  🔥 Desactivalo si usas suscripción  󰀦
+            mode = "agentic", -- USA Tools para Claude
+            disable_tools = true, -- 🔥 Agregar esto
+            -- ✅ Usar extra_request_body para evitar warnings
+            extra_request_body = {
+              temperature = 0.75,
+              max_tokens = 4096, -- Lo baje de 20480
+            },
+          },
 
           --   COPILOT - Pago 💀☠️
           copilot = {
