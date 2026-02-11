@@ -41,26 +41,27 @@ return {
       },
     })
 
-    -- 🔥 Desactivar Copilot en buffers sin archivo (como Avante, terminal, etc)
-    local copilot_state = {} -- Rastrear estado para evitar comandos repetidos
+    -- 🔥 Desactivar Copilot en buffers sin archivo (Avante, terminal, etc)
+    -- Usar vim.b.copilot_enabled en lugar de comandos para evitar RPC errors
 
-    vim.api.nvim_create_autocmd("BufEnter", {
+    -- Desactivar en filetypes específicos de Avante
+    vim.api.nvim_create_autocmd("FileType", {
+      pattern = { "Avante", "AvanteInput", "AvanteAsk", "AvanteSelectedFiles" },
       callback = function()
-        local buf_name = vim.api.nvim_buf_get_name(0)
-        local should_disable = buf_name == ""
-
-        -- Solo ejecutar comando si el estado cambió
-        if copilot_state.disabled ~= should_disable then
-          if should_disable then
-            vim.cmd("Copilot disable")
-          else
-            vim.cmd("Copilot enable")
-          end
-          copilot_state.disabled = should_disable
-        end
+        vim.b.copilot_enabled = false
       end,
     })
 
+    -- Desactivar en buffers sin nombre (buffers temporales)
+    vim.api.nvim_create_autocmd("BufEnter", {
+      callback = function()
+        local buf_name = vim.api.nvim_buf_get_name(0)
+        if buf_name == "" then
+          vim.b.copilot_enabled = false
+        end
+      end,
+    })
+    --
     -- NES: Lineas verdes predictivas en NORMAL (tipo Cursor/VSCode/Antigravity)
     vim.g.copilot_nes_debounce = 500
 
