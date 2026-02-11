@@ -42,14 +42,21 @@ return {
     })
 
     -- 🔥 Desactivar Copilot en buffers sin archivo (como Avante, terminal, etc)
+    local copilot_state = {} -- Rastrear estado para evitar comandos repetidos
+
     vim.api.nvim_create_autocmd("BufEnter", {
       callback = function()
         local buf_name = vim.api.nvim_buf_get_name(0)
-        if buf_name == "" then
-          -- Desactivar en buffers temporales (Avante, terminal, etc)
-          vim.cmd("Copilot disable")
-        else
-          vim.cmd("Copilot enable")
+        local should_disable = buf_name == ""
+
+        -- Solo ejecutar comando si el estado cambió
+        if copilot_state.disabled ~= should_disable then
+          if should_disable then
+            vim.cmd("Copilot disable")
+          else
+            vim.cmd("Copilot enable")
+          end
+          copilot_state.disabled = should_disable
         end
       end,
     })
