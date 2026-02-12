@@ -33,9 +33,9 @@ return {
       -- feature n1: Auto-switch a Ollama (provider gratuito por defecto)
       -- 🎮 Usa :AvanteSwitchProvider <provider>
       -- Providers: claude, ollama, gemini, deepseek, openrouter, copilot
-      -- vim.defer_fn(function()
-      --   pcall(vim.cmd, "silent! AvanteSwitchProvider claude")
-      -- end, 500)
+      vim.defer_fn(function()
+        pcall(vim.cmd, "silent! AvanteSwitchProvider claude")
+      end, 500)
 
       -- Temporarily move cursor away from avante during resize
       local function temporarily_leave_avante()
