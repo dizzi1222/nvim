@@ -30,10 +30,12 @@ return {
         return false
       end
 
-      -- feature n2: Auto-switch a Ollama (provider gratuito por defecto)
-      vim.defer_fn(function()
-        pcall(vim.cmd, "silent! AvanteSwitchProvider claude") -- O Ollama/gemini-cli
-      end, 500)
+      -- feature n1: Auto-switch a Ollama (provider gratuito por defecto)
+      -- 🎮 Usa :AvanteSwitchProvider <provider>
+      -- Providers: claude, ollama, gemini, deepseek, openrouter, copilot
+      -- vim.defer_fn(function()
+      --   pcall(vim.cmd, "silent! AvanteSwitchProvider claude")
+      -- end, 500)
 
       -- Temporarily move cursor away from avante during resize
       local function temporarily_leave_avante()
@@ -117,7 +119,7 @@ return {
       local is_linux = vim.fn.has("unix") == 1 and not is_wsl
       local is_termux = vim.fn.isdirectory("/data/data/com.termux") == 1
 
-      -- feature n1: Detectar si faltan avante_templates y auto-build (Windows: .dll, Linux/WSL: .so)
+      -- feature n2: Detectar si faltan avante_templates y auto-build (Windows: .dll, Linux/WSL: .so)
       local lib_ext = is_windows and ".dll" or ".so"
       local templates_lib = vim.fn.stdpath("data") .. "/lazy/avante.nvim/build/avante_templates" .. lib_ext
       if vim.fn.filereadable(templates_lib) == 0 then
