@@ -14,16 +14,17 @@ return {
         auto_trigger = true,
         debounce = 75,
         keymap = {
-          accept = "<Tab>",
-          accept_word = "<C-Right>",
-          accept_line = "<C-j>",
-          dismiss = "<C-]>",
-          next = "<M-]>",
-          prev = "<M-[>",
+          -- accept = "<Tab>",
+          -- accept_word = "<C-Right>",
+          -- accept_line = "<C-j>",
+          -- dismiss = "<C-]>",
+          -- next = "<M-]>",
+          -- prev = "<M-[>",
         },
+        -- Lo desactivo para usar Supermaven o Windsruf/Codeiunm + CopilotLSP
       },
       panel = {
-        enabled = true, -- Panel lateral con sugerencias alternativas (como el de VSCode)
+        enabled = false, -- Panel lateral con sugerencias alternativas (como el de VSCode)
         keymap = {
           -- jump_prev = "[[",
           -- jump_next = "]]",
