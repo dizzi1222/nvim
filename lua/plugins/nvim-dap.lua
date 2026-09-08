@@ -264,30 +264,13 @@ return {
         }
 
         if language == "typescript" or language == "typescriptreact" then
-          table.insert(configs, {
-            type = "pwa-node",
-            request = "launch",
-            name = "Launch TS",
-            program = function()
-              return vim.fn.expand("%:p")
-            end,
-            cwd = function()
-              return vim.fn.fnamemodify(vim.fn.expand("%:p"), ":h")
-            end,
-            -- Node >=22.6 ejecuta .ts nativo solo con este flag; en 23.6+/24
-            -- es default pero explicitarlo cubre 22.x/23.x sin reinstalar nada.
-            runtimeArgs = { "--experimental-strip-types" },
-            stopOnEntry = true,
-            sourceMaps = true,
-            resolveSourceMapLocations = { "${workspaceFolder}/**", "!**/node_modules/**" },
-          })
-
           -- TS con imports SIN extension ("./talent" -> .ts/.d.ts): Node nativo
           -- (strip-types) NO los resuelve, ESM exige extension explicita. Esta
-          -- config va SIEMPRE en ts/tsx y resuelve el proyecto en RUNTIME (no
-          -- al cargar el plugin): el root se toma del buffer activo al lanzar,
-          -- no del cwd/buffer de arranque de nvim. Asi la opcion aparece aunque
-          -- hayas abierto nvim desde ~ o con otro archivo.
+          -- config es la UNICA para .ts/.tsx (proyectos reales) y resuelve el
+          -- proyecto en RUNTIME (no al cargar el plugin): el root se toma del
+          -- buffer activo al lanzar, no del cwd/buffer de arranque de nvim.
+          -- Asi la opcion aparece aunque hayas abierto nvim desde ~ o con otro
+          -- archivo.
           --   - package.json SIN "type": "module" (CommonJS, ej. Express/TypeORM
           --     con ts-node-dev) -> `node -r ts-node/register/transpile-only`
           --     (mismo registro que ts-node-dev; fuerza require()/import a CJS
@@ -298,14 +281,15 @@ return {
           table.insert(configs, {
             type = "pwa-node",
             request = "launch",
-            name = "Launch TS (ts-node resolve imports)",
+            name = "Launch TS (project)",
             runtimeExecutable = "node",
             runtimeArgs = function()
               local proj_root = vim.fs.root(0, "tsconfig.json") or vim.fn.getcwd()
               local ts_bin = proj_root .. "/node_modules/.bin/ts-node"
               if vim.fn.filereadable(ts_bin) ~= 1 then
                 error(
-                  "ts-node no encontrado en " .. ts_bin
+                  "ts-node no encontrado en "
+                    .. ts_bin
                     .. ". Instalalo primero: `pnpm add -D ts-node-dev` (o `npm i -D ts-node-dev`)."
                 )
               end
@@ -325,7 +309,11 @@ return {
               return vim.fn.expand("%:p")
             end,
             cwd = function()
-              return vim.fn.fnamemodify(vim.fn.expand("%:p"), ":h")
+              -- Raiz del proyecto TS (tsconfig.json) en vez del dir del buffer:
+              -- dotenv/config (app.ts) lee .env desde el cwd; con el dir del
+              -- buffer (ej. src/) no encontraba .env y pasaba a pasar
+              -- CINCINNATUS_DOMAIN undefined.
+              return vim.fs.root(0, "tsconfig.json") or vim.fn.fnamemodify(vim.fn.expand("%:p"), ":h")
             end,
             environment = function()
               local proj_root = vim.fs.root(0, "tsconfig.json") or vim.fn.getcwd()
@@ -756,21 +744,21 @@ return {
             local has_ts_node = ts_bin and vim.fn.filereadable(ts_bin) == 1
             if not has_ts_node then
               return {
-                "Debug TS Backend (Express/Node): 1) Este proyecto no tiene ts-node; instalalo como devDependency: `pnpm add -D ts-node-dev` (o `npm i -D ts-node-dev`); trae ts-node + el loader que resuelve imports sin extensión. Sin él, 'Launch TS (ts-node resolve imports)' fallará con un error claro. 2) Levantá la BD antes si el server la necesita: `~/cloud-sql-proxy --port 5433 cic-ptd-dev:us-east1:cic-ptd-dev`. 3) <leader>dc → elige 'Launch TS (ts-node resolve imports)' (elige CJS o ESM según el package.json; en CommonJS NO da 'Cannot require() ES Module in a cycle'). 4) Si el server ya corre, también podés 'Attach to process'. 5) .d.ts NO se ejecuta (solo tipos).",
+                "Debug TS Backend (Express/Node): 1) Este proyecto no tiene ts-node; instalalo como devDependency: `pnpm add -D ts-node-dev` (o `npm i -D ts-node-dev`); trae ts-node + el loader que resuelve imports sin extensión. Sin él, 'Launch TS (project)' fallará con un error claro. 2) Levantá la BD antes si el server la necesita: `~/cloud-sql-proxy --port 5433 cic-ptd-dev:us-east1:cic-ptd-dev`. 3) <leader>dc → elige 'Launch TS (project)' (elige CJS o ESM según el package.json; en CommonJS NO da 'Cannot require() ES Module in a cycle'). 4) Si el server ya corre, también podés 'Attach to process'. 5) .d.ts NO se ejecuta (solo tipos).",
               }
             end
             return {
-              "Debug TS Backend (Express/Node): 1) Levantá la BD antes si el server la necesita: `~/cloud-sql-proxy --port 5433 cic-ptd-dev:us-east1:cic-ptd-dev`. 2) <leader>dc → elige 'Launch TS (ts-node resolve imports)' (elige CJS o ESM según el package.json; en CommonJS NO da 'Cannot require() ES Module in a cycle'). 3) Si el server ya corre con ts-node-dev, también podés 'Attach to process'. 4) .d.ts NO se ejecuta (solo tipos).",
+              "Debug TS Backend (Express/Node): 1) Levantá la BD antes si el server la necesita: `~/cloud-sql-proxy --port 5433 cic-ptd-dev:us-east1:cic-ptd-dev`. 2) <leader>dc → elige 'Launch TS (project)' (elige CJS o ESM según el package.json; en CommonJS NO da 'Cannot require() ES Module in a cycle'). 3) Si el server ya corre con ts-node-dev, también podés 'Attach to process'. 4) .d.ts NO se ejecuta (solo tipos).",
             }
           end
           return {
-            "Debug TS (Vite/React = NO es un script node): 1) PRIMERO levantá el proyecto → `npm run dev` (o tu runner, ej. <leader>l s); el debugger va a atacar el bundler, sin eso los breakpoints de .ts/.tsx no existen todavia. 2) <leader>dc → elige 'Launch Chrome (React/Dev)' (abre Chromium en :5173). 3) Un archivo .ts SUELTO (sin bundler/backend) sí funciona con 'Launch TS' directo: es una decision de contexto — script standalone no necesita pre-requisito; app Vite sí (como PHP con su servidor Xdebug). 4) .d.ts NO se ejecuta (solo tipos).",
+            "Debug TS (Vite/React = NO es un script node): 1) PRIMERO levantá el proyecto → `npm run dev` (o tu runner, ej. <leader>l s); el debugger va a atacar el bundler, sin eso los breakpoints de .ts/.tsx no existen todavia. 2) <leader>dc → elige 'Launch Chrome (React/Dev)' (abre Chromium en :5173). 3) Un archivo JS SUELTO (sin bundler/backend) sí funciona con 'Launch file' directo: es una decision de contexto — script standalone no necesita pre-requisito; app Vite sí (como PHP con su servidor Xdebug). 4) .d.ts NO se ejecuta (solo tipos).",
             "TS: fallo al correr directo con pwa-node = la app corre sobre Vite (browser), no sobre Node. Node no resuelve tipos ('PayloadAction') ni imports bundler. Levantá el proyecto (npm run dev) y usá Launch Chrome.",
           }
         end,
         typescriptreact = function()
           return {
-            "Debug TSX (Vite/React): 1) PRIMERO levantá la app → `npm run dev` (o tu runner, ej. <leader>l s) — el debugger ataca el dev-server del bundler, que es quien tiene compilado el .tsx en memoria con sourcemaps; sin servidor no hay código que depurar (igual que PHP necesita su servidor Xdebug). 2) <leader>dc → elige 'Launch Chrome (React/Dev)' (:5173). 3) Solo en scripts node sueltos (sin Vite/React) sirve 'Launch TS' directo, es contexto, no otra config. 4) .d.ts = solo tipos, no es ejecutable.",
+            "Debug TSX (Vite/React): 1) PRIMERO levantá la app → `npm run dev` (o tu runner, ej. <leader>l s) — el debugger ataca el dev-server del bundler, que es quien tiene compilado el .tsx en memoria con sourcemaps; sin servidor no hay código que depurar (igual que PHP necesita su servidor Xdebug). 2) <leader>dc → elige 'Launch Chrome (React/Dev)' (:5173). 3) Solo en scripts JS sueltos (sin Vite/React) sirve 'Launch file' directo, es contexto, no otra config. 4) .d.ts = solo tipos, no es ejecutable.",
             "TSX: 'Cannot find module' / errores de runtime con pwa-node = esperado: esto es una app de browser con moduleResolution bundler. Node no la puede ejecutar sola. Levantá el proyecto (npm run dev) + Launch Chrome.",
           }
         end,
@@ -787,8 +775,17 @@ return {
           return maker()
         end
         local extra_langs = {
-          "bash", "cobol", "dart", "erlang", "haskell", "kotlin", "lua",
-          "native", "ocaml", "perl", "ruby",
+          "bash",
+          "cobol",
+          "dart",
+          "erlang",
+          "haskell",
+          "kotlin",
+          "lua",
+          "native",
+          "ocaml",
+          "perl",
+          "ruby",
         }
         for _, lang in ipairs(extra_langs) do
           local ok_mod, mod = pcall(require, "nvim-dap." .. lang)
