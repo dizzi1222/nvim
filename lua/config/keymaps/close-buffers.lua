@@ -5,14 +5,46 @@ vim.g.mapleader = " "
 
 local keymap = vim.keymap
 
+-- MRU: retorna el buffer normal listado usado más recientemente (excluye el actual)
+local function get_prev_buffer()
+  local cur = vim.api.nvim_get_current_buf()
+  local buffers = vim.fn.getbufinfo({ buflisted = 1 })
+  local best, best_last = nil, -1
+  for _, buf in ipairs(buffers) do
+    local last = buf.lastused or 0
+    if
+      buf.bufnr ~= cur
+      and last > best_last
+      and vim.api.nvim_buf_is_valid(buf.bufnr)
+      and vim.bo[buf.bufnr].buftype == ""
+    then
+      best, best_last = buf.bufnr, last
+    end
+  end
+  return best
+end
+
+-- Cambia al buffer anterior por MRU y borra el actual manteniendo la ventana
+local function close_buffer(bufnr)
+  local prev = get_prev_buffer()
+  if prev then
+    vim.api.nvim_win_set_buf(0, prev)
+    vim.cmd("bdelete " .. bufnr)
+    return true
+  end
+  return false
+end
+
 -- =============================
 -- CERRAR BUFFER (PASIVO)
 -- Equivalente a: <leader>bd
 -- =============================
 vim.keymap.set("n", "<M-q>", function()
   local bufnr = vim.api.nvim_get_current_buf()
-  vim.cmd("bnext") -- Cambia al buffer siguiente en la ventana actual
-  vim.cmd("bdelete " .. bufnr) -- Borra el buffer viejo en segundo plano
+  if not close_buffer(bufnr) then
+    vim.cmd("enew")
+    vim.cmd("bdelete " .. bufnr)
+  end
 end, { noremap = true, silent = true, desc = "Borrar buffer manteniendo ventana" })
 
 -- =============================
@@ -67,8 +99,14 @@ keymap.set("n", "<C-q>", function()
   end, buffers)
 
   if #normal_buffers > 1 then
-    vim.cmd("bnext")
-    vim.cmd("bdelete " .. bufnr)
+    local prev = get_prev_buffer()
+    if prev then
+      vim.api.nvim_win_set_buf(0, prev)
+      vim.cmd("bdelete " .. bufnr)
+    else
+      vim.cmd("bnext")
+      vim.cmd("bdelete " .. bufnr)
+    end
   else
     vim.cmd("quit!")
   end
