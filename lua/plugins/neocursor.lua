@@ -17,6 +17,12 @@ return {
     map_partial = "<M-Right>",
     debounce = 250,
     show_hints = true,
+    -- 🎨 Tema de color del ghost text / diff (estilo NES). Mejor que un booleano
+    -- de 3 estados: un enum auto-documentado, un solo campo.
+    --   "classic" = verde/rojo clásico de GitHub (#238636 / #391a1a) — completo
+    --   "pywal"   = adiciones con el DiffAdd del colorscheme; borrado rojo translúcido
+    --   "none"    = sin overrides, 100% colores del colorscheme (valor por defecto)
+    nes_colors = "pywal",
   },
   config = function(_, opts)
     -- 🤫 Interceptar y silenciar el mensaje de inicio de neocursor
@@ -100,5 +106,34 @@ return {
         end
       end,
     })
+
+    -- 🎨 Tema de color del ghost text / diff de neocursor (estilo NES).
+    -- Neocursor NO expone colores en setup(): deriva de DiffAdd/DiffDelete en
+    -- preview.lua (ensure_hl). Como nuestro autocmd queda registrado después del
+    -- plugin, re-aplica tras cada ColorScheme y siempre gana.
+    -- Modos: "classic" | "pywal" | "none"  (ver opts.nes_colors)
+    local nes_theme = opts.nes_colors
+    if nes_theme == "classic" or nes_theme == "pywal" then
+      local function set_nes_hl()
+        if nes_theme == "classic" then
+          -- CLÁSICO: verde/rojo clásico de GitHub completo.
+          vim.api.nvim_set_hl(0, "NeocursorAdd", { fg = "#ffffff", bg = "#238636" })
+          vim.api.nvim_set_hl(0, "NeocursorDelete", { fg = "#ffa198", bg = "#391a1a", strikethrough = true })
+        else
+          -- PYWAL: adiciones sin override (heredan DiffAdd del colorscheme);
+          -- borrado con tinte rojo translúcido y tachado.
+          vim.api.nvim_set_hl(0, "NeocursorDelete", { bg = "#391a1a", strikethrough = true })
+        end
+        -- B: DiffDelete directo (line_hl_group en preview.lua) pinta el fondo de la
+        -- línea borrada completa. Consistente con copilot.lua y avante-cursor.lua.
+        vim.api.nvim_set_hl(0, "DiffDelete", { fg = "#ffa198", bg = "#391a1a" })
+      end
+      set_nes_hl()
+      vim.api.nvim_create_autocmd("ColorScheme", {
+        callback = set_nes_hl,
+        desc = "neocursor: NES colors (" .. nes_theme .. ")",
+      })
+    end
+    -- "none" => sin overrides, NeocursorAdd/Delete derivan del colorscheme por defecto.
   end,
 }
