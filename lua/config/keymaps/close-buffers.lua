@@ -39,7 +39,7 @@ end
 -- CERRAR BUFFER (PASIVO)
 -- Equivalente a: <leader>bd
 -- =============================
-vim.keymap.set("n", "<M-q>", function()
+vim.keymap.set("n", "<C-q>", function()
   local bufnr = vim.api.nvim_get_current_buf()
   if not close_buffer(bufnr) then
     vim.cmd("enew")
@@ -52,7 +52,7 @@ end, { noremap = true, silent = true, desc = "Borrar buffer manteniendo ventana"
 -- Equivalente a: <leader>bD
 -- =============================
 --🛑 🗿 Cerrar pestaña Y buffer
-keymap.set("n", "<C-q>", function()
+keymap.set("n", "<M-q>", function()
   local buftype = vim.bo.buftype
   local filetype = vim.bo.filetype
   local bufnr = vim.api.nvim_get_current_buf()
@@ -92,24 +92,28 @@ keymap.set("n", "<C-q>", function()
     return
   end
 
-  -- Para buffers normales
-  local buffers = vim.fn.getbufinfo({ buflisted = 1 })
-  local normal_buffers = vim.tbl_filter(function(buf)
-    return vim.fn.getbufvar(buf.bufnr, "&buftype") == ""
-  end, buffers)
-
-  if #normal_buffers > 1 then
-    local prev = get_prev_buffer()
-    if prev then
-      vim.api.nvim_win_set_buf(0, prev)
-      vim.cmd("bdelete " .. bufnr)
-    else
-      vim.cmd("bnext")
-      vim.cmd("bdelete " .. bufnr)
-    end
+  -- Asegurar un buffer sobreviviente antes de cerrar la ventana
+  local prev = get_prev_buffer()
+  if prev then
+    vim.api.nvim_win_set_buf(0, prev)
   else
-    vim.cmd("quit!")
+    vim.cmd("enew")
   end
+
+  -- Cerrar la ventana (split) solo si hay más de una abierta
+  if vim.fn.winnr("$") > 1 then
+    vim.cmd("close")
+  end
+
+  -- Borrar el buffer original (ya no se muestra en ninguna ventana)
+  if vim.api.nvim_buf_is_valid(bufnr) then
+    vim.cmd("bdelete " .. bufnr)
+  end
+
+  -- Opción destructiva: cerrar la ventana aunque sea la única (sale de nvim)
+  -- if vim.fn.winnr("$") == 1 then
+  --   vim.cmd("quit!")
+  -- end
 end, {
   noremap = true,
   silent = true,

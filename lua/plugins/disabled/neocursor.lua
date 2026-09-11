@@ -6,7 +6,7 @@
 return {
   -- 1. Apuntar a tu fork con los parches nativos
   "dizzi1222/neocursor.nvim",
-  -- commit = "0d0aede7", -- Opcional: Lazy.nvim descargará siempre lo último de main.
+  -- commit = "fec2577e", -- Opcional: Lazy.nvim descargará siempre lo último de main.
 
   event = "VeryLazy", -- Cargar al arranque: NO InsertEnter (bloquea el disparo en normal)
   opts = {
@@ -15,8 +15,16 @@ return {
     map_tab = false,
     -- Aceptar palabra a palabra (parcial) con <M-Right>.
     map_partial = "<M-Right>",
-    debounce = 250,
+    -- 👻 [opt-in] Sugerencia predictiva en NORMAL (como Cursor al leer): dispara
+    -- un request por cada pausa de lectura — consumo extra de cuota CppConfig.
+    -- La cadencia la marca &updatetime, NO el debounce del plugin.
+    cursorhold_normal = true,
     show_hints = true,
+    -- keep_suggesting_after_reject = true, -- → eliminado (queda default false, muting tras 2 rechazos como Cursor)    show_hints = true,
+    debounce = 250, -- fallback 0.25s (default del plugin; irrelevante si llega CppConfig)
+    -- NO hay debounce configurable: CppConfig lo pisa al arrancar (parity con
+    -- Cursor, ~50ms). Cualquier valor aquí solo aplica como fallback ese primer
+    -- segundo antes de que llegue CppConfig.
     -- 🎨 Tema de color del ghost text / diff (estilo NES). Mejor que un booleano
     -- de 3 estados: un enum auto-documentado, un solo campo.
     --   "classic" = verde/rojo clásico de GitHub (#238636 / #391a1a) — completo
@@ -97,15 +105,45 @@ return {
     -- 👻 Sugerencia predictiva en NORMAL: CursorHold pide la predicción (jump/ghost),
     -- replicando el disparo que Cursor hace al leer código. Evita conflictos con
     -- Supermaven/cursortab (que manejan INSERT) limitándonos a modo normal.
-    vim.api.nvim_create_autocmd("CursorHold", {
-      group = "neocursor",
-      desc = "neocursor: sugerencia predictiva en normal",
-      callback = function()
-        if vim.api.nvim_get_mode().mode:match("^[nN]") then
+    -- ⚠️ RIESGO: cada pausa de lectura dispara UN request a api2.cursor.sh (consume
+    -- cuota CppConfig), a la cadencia de &updatetime — NO del debounce del plugin.
+    -- M.suggest() NO respeta el mute 20/20 ni filtra buffers: por eso ESTE bloque
+    -- lleva guardas propias (buffer real, cooldown, y no re-disparar la misma línea
+    -- recién sugerida). Sin ellas, el loop DISMISS→REQ→SHOW quema requests. El
+    -- JUMP-forever de normal ya está resuelto por el latch 539f8b5 del fork.
+    -- Opt-in: desactivar con `cursorhold_normal = false`.
+    if opts.cursorhold_normal then
+      local last = { buf = nil, row = 0, at = 0 }
+      local MIN_IDLE_MS = 1500
+      vim.api.nvim_create_autocmd("CursorHold", {
+        group = "neocursor",
+        desc = "neocursor: sugerencia predictiva en normal (guardada)",
+        callback = function()
+          if not vim.api.nvim_get_mode().mode:match("^[nN]") then
+            return
+          end
+          local buf = vim.api.nvim_get_current_buf()
+          if vim.bo[buf].buftype ~= "" then
+            return
+          end -- solo archivos reales
+          local path = vim.fn.expand("%:.")
+          if path == "" or path:find("^neocursor://") then
+            return
+          end -- sin log/untitled/fake buffers
+          local row = vim.api.nvim_win_get_cursor(0)[1]
+          local now = vim.loop.hrtime() / 1e6
+          -- no re-disparar la misma línea recién vista/sugerida (mataba el loop)
+          if last.buf == buf and last.row == row and (now - last.at) < 5000 then
+            return
+          end
+          if (now - last.at) < MIN_IDLE_MS then
+            return
+          end
+          last.buf, last.row, last.at = buf, row, now
           require("neocursor").suggest()
-        end
-      end,
-    })
+        end,
+      })
+    end
 
     -- 🎨 Tema de color del ghost text / diff de neocursor (estilo NES).
     -- Neocursor NO expone colores en setup(): deriva de DiffAdd/DiffDelete en
