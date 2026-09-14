@@ -260,7 +260,7 @@ return {
 
     -- ── Session management ────────────────────────────────────
     {
-      "<leader>an",
+      "<leader>aN",
       function()
         require("opencode").command("session.new")
       end,
@@ -302,7 +302,7 @@ return {
       desc = " 󰮮 Compact / Reducir contexto",
     },
     {
-      "<leader>ac",
+      "<leader>aC",
       function()
         tui_send("/share\n")
       end,
@@ -332,6 +332,14 @@ return {
         tui_send("\x18m")
       end,
       desc = " 󰮮 Select Model (Ctrl+X M)",
+    },
+    {
+      "<leader>ac",
+      function()
+        require("snacks.terminal").open("opencode --continue --port 4096", OC_OPTS)
+      end,
+      mode = { "n" },
+      desc = "󰮮 Continue (abre opencode --continue en 4096)",
     },
 
     -- ── Menú de prompts [Redundante, existe visual <leader>ap]──────────────────────────────────────

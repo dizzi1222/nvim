@@ -25,6 +25,10 @@ return {
         highlighter = {
           auto_enable = true, -- Resalta colores automáticamente
           lsp = true, -- Usa LSP para detección extra
+          -- Solo filetypes con colores: evita el escaneo en buffers de texto
+          -- (el callback vim.schedule del highlighter colisionaba con input y
+          -- lanzaba "vim.schedule callback: Keyboard interrupt")
+          filetypes = { "css", "scss", "less", "html", "htmldjango", "javascript", "javascriptreact", "typescript", "typescriptreact", "python", "lua", "vim", "cobol", "cpp", "cs", "go", "java", "php", "rust" },
         },
       })
       -- Lo abres con Space + C + P = Cole Palmer 🗣️

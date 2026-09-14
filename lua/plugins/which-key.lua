@@ -23,8 +23,11 @@ return {
       { "<leader>ay", icon = { icon = "󰆏" } },
       { "<leader>a", mode = "x", group = " AI Send To", icon = { icon = "" } },
       { "<leader>aG", icon = { icon = "" } },
+      { "<leader>G", icon = { icon = "" } },
+      { "<leader>gg", icon = { icon = "" } },
       { "<leader>ag", group = "Antigravity prompt", icon = { icon = "" } },
       -- Opencode Send To AI
+      { "<leader>aC", icon = { icon = "󰮮" } },
       { "<leader>ak", icon = { icon = "󰮮" } },
       { "<leader>al", icon = { icon = "󰮮" } },
       { "<leader>aL", icon = { icon = "󰮮" } },
@@ -69,6 +72,17 @@ return {
       { "<leader>u", group = " UI" },
       { "<leader>w", group = "󱂬 Windows" },
       { "<leader>x", group = "󰁨 Diagnostics/Quickfix" },
+      -- Ocultar del dashboard los duplicados de "f" (/fork): "F".
+      -- La key vive igual pero no se lista en which-key.
+      { mode = "n", "<leader>agF", hidden = true },
+      { mode = "n", "<leader>GF", hidden = true },
+      { mode = "n", "<leader>ggF", hidden = true },
+      { mode = "n", "<leader>agg", hidden = true },
+      { mode = "n", "<leader>Gg", hidden = true },
+      { mode = "n", "<leader>ggg", hidden = true },
+      { mode = "n", "<leader>agG", hidden = true },
+      { mode = "n", "<leader>GG", hidden = true },
+      { mode = "n", "<leader>ggG", hidden = true },
     },
   },
   keys = {
