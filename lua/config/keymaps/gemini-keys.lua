@@ -7,23 +7,27 @@
 --     texto por su canal. Si no existe, lo abre vía require("antigravity").
 --     CERO ventanas nuevas: el plugin mantiene state.buf entre toggles.
 --
---   Prefijo de acciones: <leader>ag (Space + a + g)
---     <leader>ag  menú prompts (revisar/explicar/debuggear/refactorizar/...)
---     <leader>agt toggle (no slash)   <leader>agp /plan
---     <leader>agg /goal               <leader>agr /resume (switch)
---     <leader>agn /clear (new)        <leader>agf /fork (branch)
---     <leader>agm /model              <leader>agx /exit (quit)
---     <leader>agd /diff               <leader>agc /context
---     <leader>agv /btw                <leader>age /grill-me
---     <leader>ags /skills             <leader>ago /open
---     <leader>agR /rename             <leader>agC /changelog
---     <leader>agI limpiar prompt + interrumpir (Enter+ESC, NO cierra)
---                (Ctrl+C en agy SÍ cierra el TUI; por eso agI usa ESC)
+--   Prefijos de acciones (Triple alternativa):
+--     (Space+a+g), | (Space+G) | (Space+g+g)
+--     v<leader>ag / v<leader>G / v<leader>gg      prompts (fix/debug/..)  <leader>ag/ <leader>G/ <leader>gg/ Editar Keybindings
+--     <leader>agt / v<leader>Gt / v<leader>ggt    toggle (no slash)       <leader>agp / <leader>Gp /plan
+--     <leader>agL / <leader>GL / <leader>gL       /goal                   <leader>agl / <leader>Gl /resume (switch)
+--     <leader>agn / v<leader>Gn / v<leader>ggn    /clear (new)            <leader>agc / <leader>Gc /clear (clean)
+--     <leader>agf / v<leader>Gf / v<leader>ggf    /fork (branch)          <leader>agm / <leader>Gm /model
+--     <leader>agq / v<leader>Gq / v<leader>ggq    /exit (quit)            <leader>agd / <leader>Gd /diff
+--     <leader>agk / v<leader>Gk / v<leader>ggk    /context                <leader>agw / <leader>Gw /btw
+--     <leader>agw / v<leader>Gw / v<leader>ggw    /btw                    <leader>age / <leader>Ge /grill-me
+--     <leader>ags / v<leader>Gs / v<leader>ggs    /skills                 <leader>ago / <leader>Go /ggo  focus agy
+--     <leader>agr / v<leader>Gr / v<leader>ggr    /rename                 <leader>agC / <leader>GC /changelog
+--     <leader>agx / v<leader>Gx / v<leader>ggx    interrumpir             <leader>agP / <leader>GP /ggP menú
+--     <leader>ago / v<leader>Go / v<leader>ggo    focus agy               <leader>agF / <leader>GF /ggF fork
+--     <leader>agO / v<leader>GO / v<leader>ggO    open agy                <leader>agu / <leader>Gu /ggu  Undo ctrl+u
+--     <leader>agZ / v<leader>GZ / v<leader>ggZ    Redo                    <leader>ag? / <leader>G? / <leader>gg?  shortcuts
 --
 --   Envío de código con líneas exactas (estilo opencode @file, SIN contenido):
---     <leader>agb → buffer ACTUAL      (ref @ruta:1-N)
---     <leader>agB → TODOS los buffers  (refs @ruta:1-N por archivo)
---     visual <leader>ag → SELECCIÓN    (ref @ruta:start-end)
+--     <leader>agb / <leader>Gb / <leader>ggb → buffer ACTUAL      (ref @ruta:1-N)
+--     <leader>agB / <leader>GB / <leader>ggB → TODOS los buffers  (refs @ruta:1-N por archivo)
+--     visual <leader>ag / <leader>G / <leader>gg → SELECCIÓN     (ref @ruta:start-end)
 --
 --   Slash commands reales de agy (verificados en el menú / del CLI):
 --   /plan /goal /grill-me /btw /resume (switch) /rewind (undo)
@@ -121,12 +125,12 @@ local function agy_command(command)
   agy_send_text(command .. "\n")
 end
 
--- ── Limpiar prompt + interrumpir generación ─────────────────
---   NOTA: en agy Ctrl+C CIERRA el TUI (tecla de salida, Bubble Tea).
---   Enviar texto con \n teniendo el prompt NO vacío puede concatenarse
---   (p. ej. '@ruta:1-17/exit' → cierre/panic). La forma robusta de
---   "limpiar": Enter (\r) acepta/descarta el draft en curso y luego
---   ESC (\027) interrumpe la generación sin cerrar el TUI.
+-- ── Interrumpir / escapar (cli.escape nativo del CLI agy) ─────
+--   agy trae cli.escape propio: ["esc", "ctrl+w", "alt+w", "ctrl+x"].
+--   ESC (\027) interrumpe la generación sin cerrar el TUI, así que ya
+--   no hace falta el hack viejo (Enter\r + ESC) que concatenaba con el
+--   draft si el prompt no estaba vacío. Ctrl+C hoy es cli.clear_screen
+--   (limpia pantalla, ya NO cierra el TUI).
 local function agy_flush_interrupt()
   local bufs = vim.api.nvim_list_bufs()
   for i = 1, #bufs do
@@ -134,7 +138,7 @@ local function agy_flush_interrupt()
     if vim.bo[buf].buftype == "terminal" then
       local chan = vim.bo[buf].channel
       if chan and chan > 0 and vim.api.nvim_buf_get_name(buf):match("agy") then
-        vim.api.nvim_chan_send(chan, "\r\027")
+        vim.api.nvim_chan_send(chan, "\027")
         return
       end
     end
@@ -235,116 +239,173 @@ local function show_gemini_menu(start_line, end_line)
   end)
 end
 
--- ── Acción por prefijo (menú o comando slash directo) ────────
--- <leader>ag  → menú (mismo que antes de gemini).
--- <leader>agt → toggle del plugin (require antigravity).
--- <leader>agX → envía el slash command correspondiente.
-keymap.set("n", "<leader>agP", function()
-  show_gemini_menu()
-end, { desc = "󰨞 Agy: menú de prompts" })
-
-keymap.set("v", "<leader>ag", function()
-  local start_line = vim.fn.line("'<")
-  local end_line = vim.fn.line("'>")
-  show_gemini_menu(start_line, end_line)
-end, { desc = "󰨞 Agy: enviar selección a menú (solo @ruta:start-end)" })
-
-keymap.set("n", "<leader>agt", function()
+-- ── Enfocar la ventana de agy (Focus directo sin cerrar/alternar) ──
+local function agy_focus()
+  local bufs = vim.api.nvim_list_bufs()
+  for _, buf in ipairs(bufs) do
+    if vim.bo[buf].buftype == "terminal" and vim.api.nvim_buf_get_name(buf):match("agy") then
+      local win = vim.fn.bufwinid(buf)
+      if win ~= -1 then
+        vim.api.nvim_set_current_win(win)
+        vim.cmd("startinsert")
+        return
+      end
+    end
+  end
   local ok, ag = pcall(require, "antigravity")
   if ok and ag.toggle then
     ag.toggle()
   else
+    agy_fallback_open("")
+  end
+end
+
+-- ── Acción por prefijo (triple alternativa: <leader>ag, <leader>G y <leader>gg) ────────
+local prefixes = { "<leader>ag", "<leader>G", "<leader>gg" }
+
+local function map_cmd(mode, suffix, fn_or_cmd, desc)
+  local suffixes = type(suffix) == "table" and suffix or { suffix }
+  for _, pfx in ipairs(prefixes) do
+    for _, sfx in ipairs(suffixes) do
+      keymap.set(mode, pfx .. sfx, fn_or_cmd, { desc = desc })
+    end
+  end
+end
+
+-- Menú de prompts (Normal mode: <leader>ag, <leader>G, <leader>gg, <leader>agP, <leader>GP, <leader>ggP)
+map_cmd("n", "P", function()
+  show_gemini_menu()
+end, "󰨞 Agy: menú de prompts")
+
+-- Menú de prompts para selección visual (Visual mode: <leader>ag, <leader>G y <leader>gg)
+map_cmd("v", "", function()
+  local start_line = vim.fn.line("'<")
+  local end_line = vim.fn.line("'>")
+  show_gemini_menu(start_line, end_line)
+end, "󰨞 Agy: enviar selección a menú (solo @ruta:start-end)")
+
+-- ── Toggle seguro de la ventana de agy (Evita Vim:E444) ───────
+local function agy_toggle()
+  local ok, ag = pcall(require, "antigravity")
+  if ok and ag.toggle then
+    local wins = vim.api.nvim_list_wins()
+    if #wins <= 1 then
+      local buf = vim.api.nvim_win_get_buf(wins[1])
+      if vim.bo[buf].buftype == "terminal" and vim.api.nvim_buf_get_name(buf):match("agy") then
+        vim.cmd("new")
+      end
+    end
+    local toggle_ok = pcall(ag.toggle)
+    if not toggle_ok then
+      pcall(vim.cmd, "new")
+      pcall(ag.toggle)
+    end
+  else
     agy_fallback_open("\n")
   end
-end, { desc = "󰨞 Agy: toggle" })
-
-keymap.set("n", "<leader>agr", function()
-  agy_command("/resume")
-end, { desc = "󰨞 Agy: /resume (switch)" })
-
-keymap.set("n", "<leader>agp", function()
-  agy_command("/plan")
-end, { desc = "󰨞 Agy: /plan" })
-
-keymap.set("n", "<leader>agg", function()
-  agy_command("/goal")
-end, { desc = "󰨞 Agy: /goal" })
-
-keymap.set("n", "<leader>age", function()
-  agy_command("/grill-me")
-end, { desc = "󰨞 Agy: /grill-me" })
-
-keymap.set("n", "<leader>agn", function()
-  agy_command("/clear")
-end, { desc = "󰨞 Agy: /clear (new)" })
-
-keymap.set("n", "<leader>agf", function()
-  agy_command("/fork")
-end, { desc = "󰨞 Agy: /fork (branch)" })
-
-keymap.set("n", "<leader>agm", function()
-  agy_command("/model")
-end, { desc = "󰨞 Agy: /model" })
-
-keymap.set("n", "<leader>agx", function()
-  agy_command("/exit")
-end, { desc = "󰨞 Agy: /exit (quit)" })
-
-keymap.set(
-  "n",
-  "<leader>agI",
-  agy_flush_interrupt,
-  { desc = "󰨞 Agy: limpiar prompt + interrumpir (Enter+ESC, no cierra)" }
-)
-
-keymap.set("n", "<leader>agd", function()
-  agy_command("/diff")
-end, { desc = "󰨞 Agy: /diff" })
-
-keymap.set("n", "<leader>agc", function()
-  agy_command("/context")
-end, { desc = "󰨞 Agy: /context" })
-
-keymap.set("n", "<leader>agb", function()
-  send_buffer_to_agy()
-end, { desc = "󰨞 Agy: enviar buffer actual (solo @ruta:1-N)" })
-
-keymap.set("n", "<leader>agB", function()
-  send_all_buffers_to_agy()
-end, { desc = "󰨞 Agy: enviar TODOS los buffers (refs @ruta:1-N)" })
-
-keymap.set("n", "<leader>agv", function()
-  agy_command("/btw")
-end, { desc = "󰨞 Agy: /btw" })
-
-keymap.set("n", "<leader>ags", function()
-  agy_command("/skills")
-end, { desc = "󰨞 Agy: /skills" })
-
-keymap.set("n", "<leader>ago", function()
-  agy_command("/open")
-end, { desc = "󰨞 Agy: /open" })
-
-keymap.set("n", "<leader>agR", function()
-  agy_command("/rename")
-end, { desc = "󰨞 Agy: /rename" })
-
-keymap.set("n", "<leader>agC", function()
-  agy_command("/changelog")
-end, { desc = "󰨞 Agy: /changelog" })
-
--- ── Plugin de chat gemini (si está instalado) ~[REQUIERE API] ──
-local has_gemini, gemini_chat = pcall(require, "gemini.chat")
-if has_gemini then
-  keymap.set("n", "<leader>gg", function()
-    gemini_chat.prompt_current()
-  end, { desc = "󰊭 Gemini: prompt en buffer actual" })
-
-  keymap.set("v", "<leader>g", function()
-    gemini_chat.prompt_selected()
-  end, { desc = "󰊭 Gemini: prompt con texto seleccionado" })
-
-  keymap.set("n", "<leader>gl", function()
-    gemini_chat.prompt_line()
-  end, { desc = "󰊭 Gemini: prompt con línea actual" })
 end
+
+-- Toggle del plugin
+map_cmd("n", "t", agy_toggle, "󰨞 Agy: toggle")
+
+-- 👉 <Space>G + <Esc> → toggle agy: al haber quitado el mapping pelado de
+--    antigravity.lua, <Space>G abre el tablero which-key; Esc lo cierra Y
+--    togglea agy. Esta entrada aparece como hija en el tablero (visibilidad).
+map_cmd("n", "<Esc>", agy_toggle, "󰨞 Agy: toggle (Esc desde tablero)")
+
+-- Envío de buffers
+map_cmd("n", "b", function()
+  send_buffer_to_agy()
+end, "󰨞 Agy: enviar buffer actual (solo @ruta:1-N)")
+
+map_cmd("n", "B", function()
+  send_all_buffers_to_agy()
+end, "󰨞 Agy: enviar TODOS los buffers (refs @ruta:1-N)")
+
+-- Slash commands directos
+map_cmd("n", "d", function()
+  agy_command("/diff")
+end, "󰨞 Agy: /diff")
+
+map_cmd("n", "n", function()
+  agy_command("/clear")
+end, "󰨞 Agy New Session: /clear")
+
+map_cmd("n", "p", function()
+  agy_command("/plan")
+end, "󰨞 Agy Modo: /plan")
+
+-- map_cmd("n", "L", function()
+--   agy_command("/goal")
+-- end, "󰨞 Agy: /goal")
+
+-- map_cmd("n", "e", function()
+--   agy_command("/grill-me")
+-- end, "󰨞 Agy: /grill-me")
+
+map_cmd("n", { "f", "F" }, function()
+  agy_command("/fork")
+end, "󰨞 Agy Session: /fork")
+
+map_cmd("n", "m", function()
+  agy_command("/model")
+end, "󰨞 Agy Select: /model")
+
+map_cmd("n", "q", function()
+  agy_command("/exit")
+end, "󰨞 Agy Quit: /exit")
+
+map_cmd("n", "x", agy_flush_interrupt, "󰨞 Agy Interrupt (ESC / Ctrl+W to close)")
+
+map_cmd("n", "k", function()
+  agy_command("/context")
+end, "󰨞 Agy Compact / Reducir: /context")
+
+map_cmd("n", "l", function()
+  agy_command("/resume")
+end, "󰨞 Agy Select Session: /resume")
+
+-- map_cmd("n", "c", function()
+--   agy_command("/share")
+-- end, "󰨞 Agy Session: /share (link)")
+
+map_cmd("n", "w", function()
+  agy_command("/btw")
+end, "󰨞 Agy: /btw")
+
+-- map_cmd("n", "s", function()
+--   agy_command("/skills")
+-- end, "󰨞 Agy: /skills")
+
+-- Focus a la ventana de agy (reemplaza /open)
+map_cmd("n", { "o", "g", "G" }, agy_focus, "󰨞 Agy: focus")
+
+-- Atajos nativos del CLI agy (ver /keybindings) vía bytes crudos al terminal:
+map_cmd("n", "/", function()
+  agy_command("/keybindings")
+end, "󰨞 Agy Editar: /keybindings")
+
+--   Undo = ctrl+u, Redo = ctrl+r, ? = panel de shortcuts
+map_cmd("n", "u", function()
+  agy_send_text("\15")
+end, "󰨞 Agy Undo: ctrl+u")
+
+map_cmd("n", "Z", function()
+  agy_send_text("\18")
+end, "󰨞 Agy Redo: ctrl+r / ctrl+shift+z")
+
+map_cmd("n", "?", function()
+  agy_send_text("?")
+end, "󰨞 Agy Shortcuts: ?")
+
+-- map_cmd("n", "O", function()
+--   agy_command("/open")
+-- end, "󰨞 Agy Open: /open")
+
+map_cmd("n", "r", function()
+  agy_command("/rename")
+end, "󰨞 Agy: /rename")
+
+map_cmd("n", "C", function()
+  agy_command("/changelog")
+end, "󰨞 Agy: /changelog")

@@ -11,7 +11,8 @@ return {
   end,
   keys = {
     { "<Space>aG", "<cmd>Antigravity<CR>", mode = "n", desc = "󰨞 Toggle Antigravity AI" },
-    { "<Space>G", "<cmd>Antigravity<CR>", mode = "n", desc = "󰨞 Toggle Antigravity AI" },
+    -- 👉 <Space>G ya NO togglea directo: abre el tablero which-key (prefijo G?).
+    --    <Space>G + <Esc> → toggle agy (definido en gemini-keys.lua).
     -- Mas atajos en: @config.keymaps.gemini-keys /home/diego/dotfiles-dizzi/nvim/.config/nvim/lua/config/keymaps/gemini-keys.lua
   },
 }

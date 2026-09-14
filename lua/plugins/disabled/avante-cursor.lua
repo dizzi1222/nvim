@@ -9,6 +9,17 @@ return {
     event = "VeryLazy",
     version = false, -- Never set this value to "*"! Never!
 
+    -- 🔧 [dizzi fix] "Invalid log level: 3" (avante/utils/log.lua:60-63 muta log_levels
+    -- mientras itera pairs → el alias numérico log_levels[3] a veces NO se agrega;
+    -- depende del hash-seed de LuaJIT, por eso es intermitente entre sesiones).
+    -- Fix: pasar el log level como TEXTO ("OFF") → la rama string del assert solo usa
+    -- log_levels[string.upper(level)], SIEMPRE presente tras el deepcopy. Debe setearse
+    -- con `init` porque el crash ocurre al requerir el módulo (antes que setup()).
+    init = function()
+      vim.g.avante = vim.g.avante or {}
+      vim.g.avante.log_level = "OFF"
+    end,
+
     ---@module 'avante'
     ---@type avante.Config
     opts = function(_, opts)
@@ -235,8 +246,10 @@ return {
         ---@alias Mode "agentic" | "legacy"
         ---@type Mode
         mode = "legacy", -- o/ agentic -- 󰄭 GEMINI, Claude, 󰄬 etc SOPORTAN agentic, OLLAMA NO 󰂭 -- The default mode for interaction. "agentic" uses tools to automatically generate code, "legacy" uses the old planning method to generate code.
-        -- Log level to avoid Invalid log level: 3 error from avante/utils
-        -- log_level = "off"        -- 🔥 ELIMINADO / COMENTADO PARA EVITAR EL CRASH:,
+        -- 🔥 Log level como STRING (no número): la rama string del assert
+        -- (log_levels[string.upper(level)]) NO falla aunque falte el alias
+        -- numérico log_levels[3] → evita "Invalid log level: 3"
+        log_level = "off",
         -- 🔕 SILENCIAR NOTIFICACIONES, etiquetas XLS?
         hints = {
           enabled = true, -- Desactiva hints que pueden mostrar XML
@@ -435,7 +448,7 @@ return {
           toggle = {
             default = "<leader>at", -- Abrir/cerrar sidebar
             debug = "<leader>ad",
-            selection = "<leader>aC",
+            selection = "<leader>aT",
             suggestion = "<leader>aS", -- ✅ Enciende/apaga las AUTO-SUGGESTIONS (usar en proyectos grandes para no gastar tokens Free)
             repomap = "<leader>aR",
           },
