@@ -307,11 +307,7 @@ end
 
 -- Toggle del plugin
 map_cmd("n", "t", agy_toggle, "󰨞 Agy: toggle")
-
--- 👉 <Space>G + <Esc> → toggle agy: al haber quitado el mapping pelado de
---    antigravity.lua, <Space>G abre el tablero which-key; Esc lo cierra Y
---    togglea agy. Esta entrada aparece como hija en el tablero (visibilidad).
-map_cmd("n", "<Esc>", agy_toggle, "󰨞 Agy: toggle (Esc desde tablero)")
+-- map_cmd("n", "<Esc>", agy_toggle, "󰨞 Agy: toggle (Esc desde tablero)")
 
 -- Envío de buffers
 map_cmd("n", "b", function()

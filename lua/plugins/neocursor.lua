@@ -13,21 +13,21 @@
 return {
   -- 1. Apuntar a tu fork con los parches nativos
   "dizzi1222/neocursor.nvim",
-  -- commit = "1699a90e", -- Opcional: Lazy.nvim descargará siempre lo último de main.
+  -- commit = "020e763b", -- Opcional: Lazy.nvim descargará siempre lo último de main.
 
   event = "VeryLazy", -- Cargar al arranque: NO InsertEnter (bloquea el disparo en normal)
   opts = {
     -- 🔀 BACKEND REAL del cursortab. Solo "cursor" existe HOY: con "antigravity"
     -- el fork no tiene sidecar y cae a sidecar.py (Cursor) con WARN en el log —
     -- el Tab SIEMPRE fue de Cursor. (Ruta B = sidecar de supercomplete, pendiente).
-    host = "antigravity",
+    host = "cursor",
     -- 🖥️ Qué HOST alimenta <leader>C (usage):
     --   "cursor"           → tabla del plan de Cursor (cursor_usage.py)
     --   "antigravity"      → RPC del CLI (antigravity_usage.py): quota por grupo +
     --                         reset; token en antigravity_token (0600, recapturable
     --                         con capture_anty_token.sh)
     --   "antigravity-tui"  → float-terminal `agy /usage` (TUI completa)
-    usage_host = "antigravity-tui", -- "antigravity" | "antigravity-tui" | "cursor"
+    usage_host = "cursor", -- "antigravity" | "antigravity-tui" | "cursor"
     -- NO mapear <Tab> (lo gestionan Supermaven/blink en INSERT).
     -- Aceptar ghost text / saltos con el mismo set de atajos estilo NES.
     map_tab = false,

@@ -13,13 +13,32 @@ import os
 import subprocess
 import sys
 import urllib.error
+import urllib.parse
 import urllib.request
 
 BASE = "https://daily-cloudcode-pa.googleapis.com"
+OAUTH_FILE = os.path.expanduser("~/.config/nvim/anty_oauth.json")
 TOK_FILE = os.path.expanduser("~/.config/nvim/antigravity_token")
 
 
 def load_token():
+    # v1: refresh permanente con el OAuth del IDE (anty_oauth.json)
+    try:
+        c = json.load(open(OAUTH_FILE))
+        body = urllib.parse.urlencode({
+            "refresh_token": urllib.parse.unquote(c.get("refresh_token") or ""),
+            "client_id": c.get("client_id") or "",
+            "client_secret": c.get("client_secret") or "",
+            "grant_type": "refresh_token",
+        }).encode()
+        req = urllib.request.Request("https://oauth2.googleapis.com/token", data=body, method="POST")
+        with urllib.request.urlopen(req, timeout=20) as r:
+            tok = json.loads(r.read().decode()).get("access_token")
+            if tok:
+                return "Bearer " + tok
+    except Exception:
+        pass
+    # v2: fallback al token capturado (expira ~1h)
     try:
         with open(TOK_FILE, encoding="utf-8") as f:
             auth = f.read().strip()
@@ -33,8 +52,9 @@ def load_token():
 def pending(reason):
     print("┌──────────────────────────────────────────────────┐")
     print("│ ⚠️  " + reason)
-    print("│   Generá/actualizá tu token del CLI agy:          │")
-    print("│   ~/.config/nvim/capture_anty_token.sh            │")
+    print("│   El refresh automático (anty_oauth.json) falló.   │")
+    print("│   Generá/actualizá el token:                       │")
+    print("│   ~/.config/nvim/capture_anty_token.sh             │")
     print("└──────────────────────────────────────────────────┘")
 
 
