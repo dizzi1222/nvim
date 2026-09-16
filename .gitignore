@@ -7,6 +7,8 @@ cache/
 .tig_history
 .zcompdump*
 .zwc
+__pycache__/
+pycache
 
 # Ignorar carpetas pesadas o no config
 .npm/
@@ -27,3 +29,11 @@ cache/
 *.zip
 *.exe
 *:Zone.Identifier
+
+# TOKENS
+antigravity_token
+antigravity_token.sh
+anty_oauth.json
+*.pem
+mitm_dump.py
+*.log
