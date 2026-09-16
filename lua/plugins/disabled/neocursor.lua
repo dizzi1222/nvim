@@ -1,7 +1,14 @@
 -- 👻 neocursor.nvim — Cursor Tab-Tab-Tab real en Neovim
--- Usa la sesión REAL de la app Cursor (instalada y firmada): nada de API keys,
--- no consume OpenRouter, calidad genuina de Cursor Tab (ghost text + saltos).
+-- ⚠️ EL TAB ES SIEMPRE DE CURSOR: `host` es el backend REAL del ghost (hoy solo
+-- existe "cursor"; "antigravity" sin sidecar cae a Cursor con WARN en el log).
+-- Usa la sesión REAL de la app Cursor (instalada y firmada): nada de API keys.
 -- Requiere: app Cursor instalada + `uv` en PATH (ambos en work.nix).
+-- El <leader>C (usage) es INDEPENDIENTE del tab y usa `usage_host`:
+--   "cursor"        → tabla del plan de Cursor (con link al dashboard)
+--   "antigravity"   → `agy /usage` en TUI (float-terminal)
+-- Podrás borrar Cursor recién cuando exista el sidecar de supercomplete de
+-- Antigravity (ruta B, mismo backend PredictionService del CLI) — pendiente.
+-- Referencia de keymaps: copilot.lua (set de atajos NES) para consistencia.
 -- Referencia de keymaps: copilot.lua (set de atajos NES) para consistencia.
 return {
   -- 1. Apuntar a tu fork con los parches nativos
@@ -10,6 +17,12 @@ return {
 
   event = "VeryLazy", -- Cargar al arranque: NO InsertEnter (bloquea el disparo en normal)
   opts = {
+    -- 🔀 BACKEND REAL del cursortab. Solo "cursor" existe HOY: con "antigravity"
+    -- el fork no tiene sidecar y cae a sidecar.py (Cursor) con WARN en el log —
+    -- el Tab SIEMPRE fue de Cursor. (Ruta B = sidecar de supercomplete, pendiente).
+    host = "cursor",
+    -- 🖥️ Qué HOST alimenta <leader>C (usage): "cursor" (tabla) | "antigravity" (agy /usage en TUI)
+    usage_host = "cursor", --  "antigravity"
     -- NO mapear <Tab> (lo gestionan Supermaven/blink en INSERT).
     -- Aceptar ghost text / saltos con el mismo set de atajos estilo NES.
     map_tab = false,
@@ -20,17 +33,9 @@ return {
     -- La cadencia la marca &updatetime, NO el debounce del plugin.
     cursorhold_normal = true,
     show_hints = true,
-    -- keep_suggesting_after_reject = true, -- → eliminado (queda default false, muting tras 2 rechazos como Cursor)    show_hints = true,
     debounce = 250, -- fallback 0.25s (default del plugin; irrelevante si llega CppConfig)
-    -- NO hay debounce configurable: CppConfig lo pisa al arrancar (parity con
-    -- Cursor, ~50ms). Cualquier valor aquí solo aplica como fallback ese primer
-    -- segundo antes de que llegue CppConfig.
-    -- 🎨 Tema de color del ghost text / diff (estilo NES). Mejor que un booleano
-    -- de 3 estados: un enum auto-documentado, un solo campo.
-    --   "classic" = verde/rojo clásico de GitHub (#238636 / #391a1a) — completo
-    --   "pywal"   = adiciones con el DiffAdd del colorscheme; borrado rojo translúcido
-    --   "none"    = sin overrides, 100% colores del colorscheme (valor por defecto)
-    nes_colors = "pywal",
+    -- 🎨 Tema de color del ghost text / diff (estilo NES). Mejor que un booleano:
+    nes_colors = "classic", -- classic | pywal | none
   },
   config = function(_, opts)
     -- 🤫 Interceptar y silenciar el mensaje de inicio de neocursor
@@ -114,7 +119,7 @@ return {
     -- Opt-in: desactivar con `cursorhold_normal = false`.
     if opts.cursorhold_normal then
       local last = { buf = nil, row = 0, at = 0 }
-      local MIN_IDLE_MS = 1500
+      local MIN_IDLE_MS = 1500 -- 1.5s
       vim.api.nvim_create_autocmd("CursorHold", {
         group = "neocursor",
         desc = "neocursor: sugerencia predictiva en normal (guardada)",
@@ -173,5 +178,110 @@ return {
       })
     end
     -- "none" => sin overrides, NeocursorAdd/Delete derivan del colorscheme por defecto.
+
+    -- 📊 AI Usage Overview (<leader>C): consumo del HOST activo en ventana flotante.
+    --   host="cursor"      → cursor_usage.py (GetCurrentPeriodUsage + link dashboard)
+    --   host="antigravity" → float-terminal centrado con `agy` + auto `/usage`
+    --                        (TUI real: cuota semanal por grupo, modelos, cuenta).
+    -- vim.g.ai_host se despacha desde opts.usage_host (NO del tab, que es siempre cursor).
+    vim.g.ai_host = opts.usage_host == "antigravity" and "antigravity" or "cursor"
+    local usage_scripts = {
+      cursor = vim.fn.stdpath("config") .. "/cursor_usage.py",
+    }
+
+    -- 🔜 Float-terminal centrado con agy / `/usage` (fallback confiable del usage
+    -- de Antigravity — el RPC directo queda pendiente de schema). q / Esc cierra.
+    local function anty_usage_float()
+      local cols, rows = vim.o.columns, vim.o.lines
+      local width = math.min(118, cols - 6)
+      local height = math.min(34, rows - 6)
+      local buf = vim.api.nvim_create_buf(false, true)
+      vim.bo[buf].bufhidden = "wipe" -- termopen() setea buftype=terminal solo
+      local win = vim.api.nvim_open_win(buf, true, {
+        relative = "editor",
+        style = "minimal",
+        border = "rounded",
+        width = width,
+        height = height,
+        row = math.max(0, math.floor((rows - height) / 2) - 1),
+        col = math.max(0, math.floor((cols - width) / 2)),
+      })
+      local chan = vim.fn.termopen("agy", { cwd = vim.fn.expand("~") })
+      if chan > 0 then
+        vim.defer_fn(function()
+          if vim.api.nvim_buf_is_valid(buf) and vim.bo[buf].buftype == "terminal" then
+            vim.fn.chansend(chan, "/usage\r")
+          end
+        end, 2800)
+      end
+      local function close()
+        if chan and chan > 0 then
+          pcall(vim.fn.jobstop, chan)
+        end
+        if vim.api.nvim_win_is_valid(win) then
+          vim.api.nvim_win_close(win, true)
+        end
+      end
+      vim.keymap.set("n", "q", close, { buffer = buf })
+      vim.keymap.set("n", "<Esc>", close, { buffer = buf })
+      vim.keymap.set("t", "<Esc>", "<C-\\><C-n>", { buffer = buf })
+      vim.cmd("startinsert")
+    end
+    local function run_usage(script)
+      local out = {}
+      vim.fn.jobstart({ "python3", script }, {
+        stdout_buffered = true,
+        on_stdout = function(_, d)
+          if d then
+            for _, l in ipairs(d) do
+              out[#out + 1] = l
+            end
+          end
+        end,
+        on_exit = function()
+          vim.schedule(function()
+            if #out == 0 then
+              vim.notify("AI Usage: sin salida", vim.log.levels.WARN)
+              return
+            end
+            local buf = vim.api.nvim_create_buf(false, true)
+            vim.bo[buf].filetype = "markdown"
+            vim.bo[buf].bufhidden = "wipe"
+            vim.api.nvim_buf_set_lines(buf, 0, -1, false, out)
+            local w = 0
+            for _, l in ipairs(out) do
+              w = math.max(w, vim.fn.strdisplaywidth(l))
+            end
+            local cols, rows = vim.o.columns, vim.o.lines
+            local width = math.min(w + 6, cols - 4)
+            local height = math.min(#out + 2, rows - 4)
+            local win = vim.api.nvim_open_win(buf, true, {
+              relative = "editor",
+              style = "minimal",
+              border = "rounded",
+              width = width,
+              height = height,
+              row = math.max(0, math.floor((rows - height) / 2) - 1),
+              col = math.max(0, math.floor((cols - width) / 2)),
+            })
+            vim.keymap.set("n", "q", "<cmd>close<cr>", { buffer = buf })
+            vim.wo[win].cursorline = false
+          end)
+        end,
+      })
+    end
+    local function ai_usage()
+      if vim.g.ai_host == "antigravity" then
+        anty_usage_float()
+        return
+      end
+      run_usage(usage_scripts.cursor)
+    end
+    vim.api.nvim_create_user_command("AIUsage", ai_usage, {
+      desc = "AI Usage Overview (host-aware)",
+    })
+    vim.keymap.set("n", "<leader>C", "<cmd>AIUsage<cr>", {
+      desc = "󰀺 AI Usage Overview (host-aware)",
+    })
   end,
 }
