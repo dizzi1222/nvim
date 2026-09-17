@@ -79,7 +79,7 @@ return {
   -- {
   --   "sudo-tee/opencode.nvim", -- 2. Integrado en el chat de NVIM rapido
   --   name = "opencode-sudo", -- 7/10
-  --   enabled = false, -- Lo mismo pero integrado a NEOVIM [Like Avante], No me convence, pero ta god, es OPENCODE 󰮮 .
+  --   enabled = true, -- Lo mismo pero integrado a NEOVIM [Like Avante], No me convence, pero ta god, es OPENCODE 󰮮 .
   -- },
   -- {
   --   "olimorris/codecompanion.nvim", -- 4/10 | Codeium: 2/10
@@ -112,6 +112,7 @@ return {
     "sphamba/smear-cursor.nvim",
     enabled = true,
   },
-  -- { "obsidian-nvim/obsidian.nvim", enabled = false },
+  { "folke/todo-comments.nvim", enabled = true },
+  -- { "obsidian-nvim/obsidian.nvim", enabled = true },
   -- { "nvim-lua/plenary.nvim", enabled = false }, -- ESTO ES VITAL! 💀
 }

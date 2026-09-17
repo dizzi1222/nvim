@@ -147,5 +147,60 @@ return {
     vim.keymap.set({ "n" }, "<Esc>", function()
       ct_daemon.send_event("esc")
     end, { noremap = true, silent = true, desc = "cursortab: Rechazar (Esc)" })
+
+    -- 📊 Mercury Usage Overview (<leader>M / :MercuryUsage)
+    local function mercury_usage()
+      local script = vim.fn.stdpath("config") .. "/cursortab_mercuryapi_usage.py"
+      local out = {}
+      vim.fn.jobstart({ "python3", script }, {
+        stdout_buffered = true,
+        on_stdout = function(_, d)
+          for _, l in ipairs(d or {}) do
+            if l ~= "" then
+              table.insert(out, l)
+            end
+          end
+        end,
+        on_exit = function()
+          vim.schedule(function()
+            if #out == 0 then
+              vim.notify("Mercury Usage: sin respuesta", vim.log.levels.WARN)
+              return
+            end
+            local buf = vim.api.nvim_create_buf(false, true)
+            vim.bo[buf].filetype = "markdown"
+            vim.bo[buf].bufhidden = "wipe"
+            vim.api.nvim_buf_set_lines(buf, 0, -1, false, out)
+            local w = 0
+            for _, l in ipairs(out) do
+              w = math.max(w, vim.fn.strdisplaywidth(l))
+            end
+            local cols, rows = vim.o.columns, vim.o.lines
+            local width, height = math.min(w + 4, cols - 4), math.min(#out + 2, rows - 4)
+            local win = vim.api.nvim_open_win(buf, true, {
+              relative = "editor",
+              style = "minimal",
+              border = "rounded",
+              width = width,
+              height = height,
+              row = math.max(0, math.floor((rows - height) / 2) - 1),
+              col = math.max(0, math.floor((cols - width) / 2)),
+            })
+            vim.keymap.set("n", "q", "<cmd>close<cr>", { buffer = buf, silent = true })
+            vim.keymap.set("n", "<Esc>", "<cmd>close<cr>", { buffer = buf, silent = true })
+            vim.wo[win].cursorline = false
+          end)
+        end,
+      })
+    end
+
+    vim.api.nvim_create_user_command("MercuryUsage", mercury_usage, { desc = "Mercury Quota Overview" })
+    vim.keymap.set("n", "<leader>C", "<cmd>MercuryUsage<cr>", { desc = " Mercury Usage Overview 󰓅" })
+
+    -- which-key: solo mostrar icono cuando cursortab está activo
+    local ok, wk = pcall(require, "which-key")
+    if ok then
+      wk.add({ "<leader>C", icon = { icon = "󱂛" } })
+    end
   end,
 }

@@ -265,13 +265,15 @@ end, { desc = "Live Server [HTML]" })
 -- [ls] Start dev server — unificado para SvelteKit, React, etc.
 keymap.set("n", "<leader>ls", function()
   local options = {
-    { label = "vite     → pnpm run dev",   cmd = "pnpm run dev" },
-    { label = "svelte   → pnpm run dev",   cmd = "pnpm run dev" },
-    { label = "react    → pnpm start",     cmd = "pnpm start" },
-    { label = "npm      → npm run dev",    cmd = "npm run dev" },
-    { label = "next     → pnpm dev",       cmd = "pnpm dev" },
+    { label = "vite     → pnpm run dev", cmd = "pnpm run dev" },
+    { label = "svelte   → pnpm run dev", cmd = "pnpm run dev" },
+    { label = "react    → pnpm start", cmd = "pnpm start" },
+    { label = "npm      → npm run dev", cmd = "npm run dev" },
+    { label = "next     → pnpm dev", cmd = "pnpm dev" },
   }
-  local labels = vim.tbl_map(function(o) return o.label end, options)
+  local labels = vim.tbl_map(function(o)
+    return o.label
+  end, options)
   vim.ui.select(labels, { prompt = "Dev server:" }, function(choice, idx)
     if choice then
       vim.cmd("cd %:h | term " .. options[idx].cmd)

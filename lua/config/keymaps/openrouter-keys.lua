@@ -8,13 +8,17 @@ local function list_openrouter_models()
   end
 
   vim.fn.jobstart({
-    "curl", "-s",
-    "-H", "Authorization: Bearer " .. api_key,
+    "curl",
+    "-s",
+    "-H",
+    "Authorization: Bearer " .. api_key,
     "https://openrouter.ai/api/v1/models",
   }, {
     stdout_buffered = true,
     on_stdout = function(_, data)
-      if not data or #data == 0 then return end
+      if not data or #data == 0 then
+        return
+      end
       local ok, result = pcall(vim.json.decode, table.concat(data, ""))
       if not ok or not result.data then
         vim.notify("❌ Error al obtener modelos", vim.log.levels.ERROR)
@@ -59,3 +63,17 @@ local function list_openrouter_models()
 end
 
 keymap.set({ "n" }, "<leader>aL", list_openrouter_models, { desc = " 󱋭 Listar modelos OpenRouter" })
+
+-- which-key: registrar después de VeryLazy
+vim.api.nvim_create_autocmd("User", {
+  pattern = "VeryLazy",
+  once = true,
+  callback = function()
+    local ok, wk = pcall(require, "which-key")
+    if ok then
+      wk.add({
+        { "<leader>aL", icon = { icon = "󱋭" } },
+      })
+    end
+  end,
+})

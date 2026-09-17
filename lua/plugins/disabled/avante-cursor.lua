@@ -516,5 +516,19 @@ return {
       },
       -- [Indexado ] Soporte para pegar imágenes
     },
+    config = function(_, opts)
+      require("avante").setup(opts)
+      -- which-key: registrar después de que avante esté listo
+      vim.defer_fn(function()
+        local ok, wk = pcall(require, "which-key")
+        if ok then
+          wk.add({
+            { "<leader>ae", mode = "x", group = "avante: edit", icon = { icon = "" } },
+            { "<leader>an", mode = "x", group = "avante: new ask", icon = { icon = "" } },
+            { "<leader>aa", mode = "x", group = "avante: ask", icon = { icon = "" } },
+          })
+        end
+      end, 100)
+    end,
   },
 }

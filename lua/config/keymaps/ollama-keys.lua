@@ -133,7 +133,9 @@ local function show_ollama_list()
   vim.fn.jobstart({ "bash", "-c", full_cmd }, {
     stdout_buffered = true,
     on_stdout = function(_, data)
-      if not data or #data == 0 then return end
+      if not data or #data == 0 then
+        return
+      end
       local raw = table.concat(data, "\n")
       local lines = { " 󰎣 Ollama modelos disponibles:", "" }
       for _, line in ipairs(vim.split(raw, "\n")) do
@@ -357,7 +359,7 @@ local function show_ollama_menu(selected_text)
 end
 
 -- MAPEOS
-vim.keymap.set("n", "<leader>aL", function()
+vim.keymap.set("n", "<leader>a/", function()
   show_ollama_list()
 end, { desc = " 󰎣  🦙 Listar modelos" })
 
@@ -368,7 +370,7 @@ vim.keymap.set("v", "<leader>aO", function()
 end, { desc = " 󰎣  🦙 Enviar selección a Ollama" })
 
 -- Mapeos DESACTIVADOS TEMPORALMENTE!!!
--- vim.keymLap.set("n", "<leader>aO", function()
+-- vim.keymap.set("n", "<leader>aO", function()
 --   show_ollama_menu(nil)
 -- end, { desc = " 󰎣  🦙 Abrir Ollama" })
 
@@ -400,3 +402,18 @@ end, {})
 --     end
 --   end)
 -- end, { desc = " 󰎣  🦙 Switch/Cambiar modelo de Ollama rápido" })
+
+-- which-key: registrar después de VeryLazy
+vim.api.nvim_create_autocmd("User", {
+  pattern = "VeryLazy",
+  once = true,
+  callback = function()
+    local ok, wk = pcall(require, "which-key")
+    if ok then
+      wk.add({
+        { "<leader>a/", icon = { icon = "󰎣" } },
+        { "<leader>aO", mode = "x", icon = { icon = "󰎣" } },
+      })
+    end
+  end,
+})
