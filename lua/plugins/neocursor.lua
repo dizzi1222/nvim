@@ -296,5 +296,11 @@ return {
     vim.keymap.set("n", "<leader>C", "<cmd>AIUsage<cr>", {
       desc = "󰀺 AI Usage Overview (host-aware)",
     })
+
+    -- which-key: solo mostrar icono cuando cursortab está activo
+    local ok, wk = pcall(require, "which-key")
+    if ok then
+      wk.add({ "<leader>C", icon = { icon = "󱂛" } })
+    end
   end,
 }

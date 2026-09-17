@@ -21,12 +21,12 @@ return {
       })
 
       local telescope = require("telescope.builtin")
-      vim.keymap.set("n", "gt", function() -- similar a <leader>gd (go to definition)
+      vim.keymap.set("n", "<leader>gt", function() -- similar a <leader>gd (go to definition)
         telescope.lsp_definitions()
-      end, { desc = "⚡ Definición (LSP)", silent = true })
-      vim.keymap.set("n", "gr", function() -- similar a <leader>sw (search word [RIPGREP])
+      end, { desc = "⚡ Go To Definición (LSP)", silent = true })
+      vim.keymap.set("n", "<leader>gr", function() -- similar a <leader>sw (search word [RIPGREP])
         telescope.lsp_references()
-      end, { desc = "⚡ Referencias (LSP)", silent = true })
+      end, { desc = "⚡Go To Referencias (LSP)", silent = true })
       -- 🧠 Inspect e InspectTree NO son del plugin: son NATIVOS de LazyVim/LSP
       -- (builtins de nvim). Aparecen siempre en el menú de acciones al hacer
       -- click/saltar sobre una definición — estos atajos solo los hacen cómodos.

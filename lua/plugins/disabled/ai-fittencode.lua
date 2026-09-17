@@ -36,5 +36,14 @@ return {
 
     -- Updatetime más bajo = respuestas más rápidas
     vim.opt.updatetime = 200
+
+    -- which-key: solo mostrar icono cuando fittencode está activo
+    local ok, wk = pcall(require, "which-key")
+    if ok then
+      wk.add({
+        { "<leader>af", icon = { icon = "" } },
+        { "<leader>af", mode = "x", icon = { icon = "" } },
+      })
+    end
   end,
 }

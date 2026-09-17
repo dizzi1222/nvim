@@ -148,18 +148,13 @@ local PLUGINS_CONFIG = {
     file = "claude-code.lua",
     category = "Claude",
   },
-  claude_old = {
-    name = "Claude Code (old)",
-    icon = "",
-    file = "claude-code-old.lua",
-    category = "Claude",
-  },
 
   -- 🎨 UI/UX
   bufferline = {
     name = "Bufferline",
     icon = "󰓩",
     file = "bufferline.lua",
+    repo = "akinsho/bufferline.nvim",
     category = "UI",
   },
   markdown = {
@@ -178,12 +173,14 @@ local PLUGINS_CONFIG = {
     name = "Snacks",
     icon = "",
     file = "snacks.lua",
+    repo = "folke/snacks.nvim",
     category = "UI",
   },
   smear_cursor = {
     name = "Smear Cursor",
     icon = "󱄧",
     file = "smear-cursor.lua",
+    repo = "sphamba/smear-cursor.nvim",
     category = "UI",
   },
   precognition = {
@@ -212,6 +209,7 @@ local PLUGINS_CONFIG = {
     name = "Todo Comments",
     icon = "",
     file = "todo-comments.lua",
+    repo = "folke/todo-comments.nvim",
     category = "Productivity",
   },
   mcphub = {
@@ -260,45 +258,54 @@ local function update_disabled_config(plugin_key, should_disable)
   local plugin_found = false
   local i = 1
 
-  while i <= #content do
-    local line = content[i]
-
-    -- Busca el bloque del plugin por nombre o archivo
-    if line:match(config.name:gsub("%-", "%%-")) or line:match(config.file:gsub("%-", "%%-")) then
-      plugin_found = true
-      -- Busca la línea "enabled = true/false" en los siguientes 15 líneas
-      for j = i, math.min(i + 15, #content) do
-        if content[j]:match("enabled%s*=%s*[a-z]+") then
-          local old_line = content[j]
-          local new_line = old_line:gsub("enabled%s*=%s*[a-z]+", "enabled = " .. (should_disable and "false" or "true"))
-
-          if new_line ~= old_line then
-            content[j] = new_line
-            modified = true
-            break
-          end
+  -- Función auxiliar para encontrar la línea del plugin
+  local function find_plugin_line()
+    for idx, line in ipairs(content) do
+      -- Primero intentar con repo exacto (si existe)
+      if config.repo and line:find(config.repo, 1, true) then
+        return idx
+      end
+      -- Fallback: buscar por nombre o archivo (mantener compatibilidad)
+      if not config.repo then
+        local name_match = line:find(config.name, 1, true)
+        local file_match = line:find(config.file, 1, true)
+        if name_match or file_match then
+          return idx
         end
       end
-      if modified then
-        break
-      end
     end
-    i = i + 1
+    return nil
   end
 
-  if not plugin_found then
-    -- No tiene entrada `enabled =` en disabled.lua → se gestiona por sistema de
+  i = find_plugin_line()
+  if not i then
+    -- No tiene entrada en disabled.lua → se gestiona por sistema de
     -- archivos (mover el .lua entre plugins/ y plugins/disabled/). No emitimos
     -- aviso aquí: move_plugin() hará el fallback y ya notifica su propio
     -- "Activado/Desactivado". Evita la falsa alarma del toggle por archivo.
     return false
   end
 
+  -- Busca la línea "enabled = true/false" en los siguientes 15 líneas
+  local modified = false
+  for j = i, math.min(i + 30, #content) do
+    if content[j]:match("enabled%s*=%s*[a-z]+") then
+      local old_line = content[j]
+      local new_line = old_line:gsub("enabled%s*=%s*[a-z]+", "enabled = " .. (should_disable and "false" or "true"))
+
+      if new_line ~= old_line then
+        content[j] = new_line
+        modified = true
+        break
+      end
+    end
+  end
+
   if modified then
     vim.fn.writefile(content, disabled_file)
   end
 
-  return true
+  return modified
 end
 
 -- Move plugin file between lua/plugins/ and lua/plugins/disabled/
@@ -376,15 +383,34 @@ local function is_plugin_disabled(plugin_key)
   local disabled_file = get_disabled_lua_path()
   if vim.fn.filereadable(disabled_file) == 1 then
     local content = vim.fn.readfile(disabled_file)
-    for i, line in ipairs(content) do
-      if line:match(config.name:gsub("%-", "%%-")) or line:match(config.file:gsub("%-", "%%-")) then
-        -- Buscar "enabled = false" en los siguientes 15 líneas
-        for j = i, math.min(i + 15, #content) do
-          if content[j]:match("enabled%s*=%s*false") then
-            return true
-          elseif content[j]:match("enabled%s*=%s*true") then
-            return false
+
+    -- Función auxiliar para encontrar la línea del plugin
+    local function find_plugin_line()
+      for idx, line in ipairs(content) do
+        -- Primero intentar con repo exacto (si existe)
+        if config.repo and line:find(config.repo, 1, true) then
+          return idx
+        end
+        -- Fallback: buscar por nombre o archivo (mantener compatibilidad)
+        if not config.repo then
+          local name_match = line:find(config.name, 1, true)
+          local file_match = line:find(config.file, 1, true)
+          if name_match or file_match then
+            return idx
           end
+        end
+      end
+      return nil
+    end
+
+    local i = find_plugin_line()
+    if i then
+      -- Buscar "enabled = true/false" en los siguientes 30 líneas
+      for j = i, math.min(i + 30, #content) do
+        if content[j]:match("enabled%s*=%s*false") then
+          return true -- Plugin está desactivado
+        elseif content[j]:match("enabled%s*=%s*true") then
+          return false -- Plugin está activado
         end
       end
     end

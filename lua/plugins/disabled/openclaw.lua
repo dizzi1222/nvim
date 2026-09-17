@@ -15,5 +15,11 @@ return {
     vim.keymap.set("n", "<leader>aOd", "<cmd>OpenClawDisconnect<cr>", { desc = "OpenClaw Disconnect" })
     vim.keymap.set("n", "<leader>aOs", "<cmd>OpenClawStatus<cr>", { desc = "OpenClaw Status" })
     vim.keymap.set("n", "<leader>aOt", "<cmd>OpenClawTUI<cr>", { desc = "OpenClaw TUI" })
+
+    -- which-key: solo mostrar icono cuando openclaw está activo
+    local ok, wk = pcall(require, "which-key")
+    if ok then
+      wk.add({ "<leader>aO", group = "🦞 ~ Abrir Clawdbot Openclawd", icon = { icon = "🦞" } })
+    end
   end,
 }

@@ -424,5 +424,27 @@ return {
     vim.keymap.set("n", "<S-C-d>", function()
       require("opencode").command("session.half.page.down")
     end, { desc = " 󰮮 Scroll opencode down" })
+
+    -- which-key: solo mostrar iconos cuando opencode está activo
+    local ok, wk = pcall(require, "which-key")
+    if ok then
+      wk.add({
+        { "<leader>aC", icon = { icon = "󰮮" } },
+        { "<leader>ak", icon = { icon = "󰮮" } },
+        { "<leader>al", icon = { icon = "󰮮" } },
+        { "<leader>am", icon = { icon = "󰮮" } },
+        { "<leader>ao", icon = { icon = "󰮮" } },
+        { "<leader>ar", icon = { icon = "󰮮" } },
+        { "<leader>aF", icon = { icon = "󰮮" } },
+        { "<leader>as", icon = { icon = "󰮮" } },
+        { "<leader>au", icon = { icon = "󰮮" } },
+        { "<leader>ax", icon = { icon = "󰮮" } },
+        { "<leader>ap", icon = { icon = "󰮮" } },
+        { "<leader>af", icon = { icon = "" } },
+        { "<leader>ab", icon = { icon = "" } },
+        { "<leader>aB", icon = { icon = "" } },
+        -- Engram: Memory Persistent [Opencode, AI] + Atajos en: @plugins/which-key.lua:L23
+      })
+    end
   end,
 }

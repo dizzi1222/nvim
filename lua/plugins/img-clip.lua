@@ -47,4 +47,16 @@ return {
       mode = { "n", "i" },
     },
   },
+  config = function(_, opts)
+    require("img-clip").setup(opts)
+    -- which-key: solo mostrar icono cuando img-clip está activo
+    local ok, wk = pcall(require, "which-key")
+    if ok then
+      wk.add({
+        -- [Normal Mode]
+        { "<leader>i", group = "󰋩 Imágenes Clipboard", icon = { icon = "" } },
+        { "<leader>aP", icon = { icon = "" } },
+      })
+    end
+  end,
 }
