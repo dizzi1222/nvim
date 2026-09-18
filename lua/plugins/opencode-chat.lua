@@ -115,6 +115,60 @@ local function focus_opencode()
   end
 end
 
+-- ── Engram: memoria persistente ────────────────────────────────────────────
+-- Autodetección de proyecto por cwd; el resumen de sesión SIEMPRE a dotfiles-dizzi.
+-- Espejos: <leader>em* (largo) y <leader>m* (corto, sin chocar con markdown).
+local function eng_save(title, msg)
+  if title == "" or msg == "" then
+    return
+  end
+  vim.fn.system('engram save "' .. title .. '" "' .. msg .. '" --type lesson')
+  vim.notify("Saved to Engram (proyecto detectado)")
+end
+
+local function eng_save_lesson()
+  local title = vim.fn.input("Lesson title: ")
+  if title == "" then
+    return
+  end
+  local msg = vim.fn.input("Lesson content: ")
+  eng_save("Lección: " .. title, msg)
+end
+
+local function eng_save_pattern()
+  local title = vim.fn.input("Pattern title: ")
+  if title == "" then
+    return
+  end
+  local msg = vim.fn.input("Pattern description: ")
+  if msg == "" then
+    return
+  end
+  vim.fn.system('engram save "Patrón: ' .. title .. '" "' .. msg .. '" --type pattern')
+  vim.notify("Pattern saved to Engram")
+end
+
+local function eng_session_summary()
+  local msg = vim.fn.input("Session summary: ")
+  if msg == "" then
+    return
+  end
+  vim.fn.system('engram save "Resumen de sesión" "' .. msg .. '" --type session-summary --project dotfiles-dizzi')
+  vim.notify("Session summary saved (dotfiles-dizzi)")
+end
+
+local function eng_context()
+  vim.notify(vim.fn.system("engram context"))
+end
+
+local function eng_search()
+  local query = vim.fn.input("Search: ")
+  if query == "" then
+    return
+  end
+  vim.notify(vim.fn.system('engram search "' .. query .. '"'))
+end
+
 return {
   -- 1. Apuntar a tu fork con los parches nativos
   "dizzi1222/opencode.nvim",
@@ -342,7 +396,72 @@ return {
       desc = "󰮮 Continue (abre opencode --continue en 4096)",
     },
 
-    -- ── Menú de prompts [Redundante, existe visual <leader>ap]──────────────────────────────────────
+    -- ── Engram: Memoria persistente ────────────────────────────
+    -- <leader>em*  → grupal largo  |  <leader>m*  → espejo corto (sin chocar con markdown)
+    {
+      "<leader>ems",
+      function()
+        eng_save(vim.fn.input("Title: "), vim.fn.input("Message: "))
+      end,
+      desc = "󰍛 Engram: Save memory",
+    },
+    {
+      "<leader>ms",
+      function()
+        eng_save(vim.fn.input("Title: "), vim.fn.input("Message: "))
+      end,
+      desc = "󰍛 Engram: Save memory",
+    },
+    {
+      "<leader>eml",
+      eng_save_lesson,
+      desc = "󰍛 Engram: Save lesson",
+    },
+    {
+      "<leader>ml",
+      eng_save_lesson,
+      desc = "󰍛 Engram: Save lesson",
+    },
+    {
+      "<leader>emp",
+      eng_save_pattern,
+      desc = "󰍛 Engram: Save pattern",
+    },
+    {
+      "<leader>mp",
+      eng_save_pattern,
+      desc = "󰍛 Engram: Save pattern",
+    },
+    {
+      "<leader>emsess",
+      eng_session_summary,
+      desc = "󰍛 Engram: Save session summary",
+    },
+    {
+      "<leader>mS",
+      eng_session_summary,
+      desc = "󰍛 Engram: Save session summary",
+    },
+    {
+      "<leader>emc",
+      eng_context,
+      desc = "󰍛 Engram: Show context",
+    },
+    {
+      "<leader>mc",
+      eng_context,
+      desc = "󰍛 Engram: Show context",
+    },
+    {
+      "<leader>emf",
+      eng_search,
+      desc = "󰍛 Engram: Search memory",
+    },
+    {
+      "<leader>mf",
+      eng_search,
+      desc = "󰍛 Engram: Search memory",
+    },
   },
 
   config = function()

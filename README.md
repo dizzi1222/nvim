@@ -20,6 +20,7 @@
 - [Atajos Principales](#-atajos-principales)
 - [Instalación Rápida](#-instalación-rápida)
 - [Configuración por Plataforma](#️-configuración-por-plataforma)
+- [IA · Compleción y Usage](#-ia--compleción-y-usage)
 - [Sincronización Automática](#-sincronización-automática)
 - [PowerToys Setup](#-powertoys-setup-windows)
 - [Estructura del Proyecto](#-estructura-del-proyecto)
@@ -153,6 +154,65 @@ ln -s /mnt/c/Users/Diego/AppData/Local/nvim ~/.config/nvim
 ```
 
 **Razón técnica:** WSL tiene overhead masivo al acceder a `/mnt/c/` mediante symlinks. La sincronización manual copia archivos al sistema de archivos nativo de WSL, eliminando el lag.
+
+---
+
+## 🤖 IA · Compleción y Usage
+
+Panorama de los motores de IA en esta config (Linux). Los ajustes finos viven
+en `lua/plugins/*.lua`; acá está el mapa de quién alimenta cada cosa.
+
+### Compleción (inline / tab)
+
+| Motor | Archivo | Backend | Modo |
+|---|---|---|---|
+| **Copilot (NES)** | `lua/plugins/copilot.lua` | GitHub Copilot (`copilot.lua` + `copilot-lsp`) | Inline en INSERT + **líneas verdes predictivas en NORMAL** (NES) |
+| **neocodeium** | `lua/plugins/neocodeium.lua` | Windsurf/Codeium (gratis, `:NeoCodeium auth`) | Inline, Alt en vez de `<Tab>` |
+| **Supermaven** | `lua/plugins/supermaven.lua` | Supermaven (gratis) | Inline con `<Tab>` |
+| **neocursor** | `lua/plugins/neocursor.lua` | `dizzi1222/neocursor.nvim` + `sidecar_antigravity.py` | Cursor Tab-Tab-Tab (ver nota abajo) |
+
+> **neocursor (reciente):** usa el backend de completions de Antigravity/Google
+> (`/v1internal:streamGenerateContent` con `tab_flash_lite_preview` y tu OAuth).
+> El sidecar vive en el fork `dizzi1222/neocursor.nvim`: el ghost se extrae por
+> match de prefix cercano al cursor + anchor de coherencia, y el "siguiente
+> edit" se ubica con difflib en su posición real (jump Tab). El
+> `capture_anty_token.sh` (token OAuth) es multi-OS (openssl del sistema,
+> fallback Nix). La cuota del TAB es una **pool separada e invisible** — ver
+> Usage.
+
+**Soporte de lenguajes del sidecar** (`lang_for_path` en `sidecar_antigravity.py`):
+el prompt del tab anuncia el lenguaje del archivo al modelo como cabecera
+("This is a TypeScript file.") para orientarlo mejor que un rol genérico:
+
+```python
+return {
+    ".ts": "TypeScript", ".tsx": "TypeScript/React",
+    ".js": "JavaScript", ".jsx": "JavaScript/React",
+    ".py": "Python", ".rs": "Rust", ".go": "Go",
+    ".java": "Java", ".c": "C", ".h": "C", ".cpp": "C++",
+    ".hpp": "C++", ".cs": "C#", ".rb": "Ruby", ".php": "PHP",
+    ".swift": "Swift", ".kt": "Kotlin", ".lua": "Lua",
+    ".sh": "Shell", ".bash": "Shell", ".zsh": "Shell",
+    ".css": "CSS", ".scss": "SCSS", ".html": "HTML",
+    ".json": "JSON", ".md": "Markdown",
+}
+```
+
+> Extensión desconocida → no se anuncia lenguaje (cabecera vacía).
+
+### Usage (`<leader>C` → `:AIUsage`)
+
+| Motor | Fuente | Qué muestra |
+|---|---|---|
+| `antigravity_usage.py` | RPC `retrieveUserQuotaSummary` | Cuota del **agente** de agy por grupo (Gemini / Claude+GPT) |
+| `cursor_usage.py` | RPC de Cursor | Plan de Cursor |
+| `agy /usage` (TUI) | `anty_usage_float()` | `agy /usage` en float-terminal |
+
+⚠️ **La cuota del TAB (neocursor/completions) no es consultable.** Los RPC de
+quota (`retrieveUserQuotaSummary` / `retrieveUserQuota`) solo exponen modelos de
+**chat**; el SSE del tab devuelve únicamente `usageMetadata` (tokens por request)
+sin límite ni barra. Los % que ves en `agy /usage` son del agente, **no** del
+tab — por eso el tab puede seguir respondiendo con la cuota del agente en 0%.
 
 ---
 

@@ -28,7 +28,7 @@ return {
       },
       { "<leader>b", group = "󰓩 Buffer", icon = { icon = "󰓩", color = "green" } },
       { "<leader>h", group = "󰓹 Tag Menu", icon = { icon = "󰛢", color = "blue" } },
-      { "<leader>m", group = "󰍔 Markdown", icon = { icon = "󰍔", color = "red" } },
+      { "<leader>m", group = "󰍔 Markdown / 󰍛 Engram", icon = { icon = "󰍔", color = "red" } },
       { "<leader>?", group = "show all keymaps", icon = { icon = "󰌌", color = "cyan" } },
       { "<leader>k", group = "󰌌 screenkey", icon = { icon = "󰳽", color = "cyan" } },
       { "<leader>K", group = "󰌌 Help Keywordprg", icon = { icon = "󰘦", color = "cyan" } },
@@ -59,6 +59,13 @@ return {
     { "<leader>bl", "<C-^>", desc = "Switch to last buffer" },
     { "<leader>bn", "<cmd>bn<CR>", desc = "Next buffer" },
     { "<leader>bp", "<cmd>bn<CR>", desc = "Next buffer" },
+    -- Engram (memoria persistente) — espejo corto <leader>m* (sin chocar con markdown)
+    { "<leader>ms", desc = "󰍛 Save memory" },
+    { "<leader>ml", desc = "󰍛 Save lesson" },
+    { "<leader>mp", desc = "󰍛 Save pattern" },
+    { "<leader>mc", desc = "󰍛 Show context" },
+    { "<leader>mf", desc = "󰍛 Search memory" },
+    { "<leader>mS", desc = "󰍛 Session summary" },
     -- File keymaps
     {
       "<leader>fd",

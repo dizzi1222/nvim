@@ -15,7 +15,13 @@ cleanup() { rm -rf "$D"; }
 trap cleanup EXIT
 
 echo "[1/3] certs (openssl)"
-nix shell nixpkgs#openssl -c sh -c "
+# openssl del sistema si existe (Arch/macOS/Windows-gitbash/WSL); fallback NixOS
+if command -v openssl >/dev/null 2>&1; then
+  GEN=""
+else
+  GEN="nix shell nixpkgs#openssl -c"
+fi
+$GEN sh -c "
   openssl req -x509 -newkey rsa:2048 -nodes -keyout $D/ca.key -out $D/ca.pem -days 1 -subj /CN=m 2>/dev/null
   openssl req -newkey rsa:2048 -nodes -keyout $D/leaf.key -out $D/leaf.csr -subj /CN=$HOST 2>/dev/null
   printf 'subjectAltName=DNS:$HOST\n' > $D/ext.cnf
@@ -87,7 +93,18 @@ while True:
 PY
 MP=$!
 sleep 2
-env HTTPS_PROXY=http://127.0.0.1:18999 SSL_CERT_FILE="$D/ca.pem" timeout 25 agy -p "di solo: ok" >/dev/null 2>&1 || true
+# timeout no es nativo en macOS (coreutils → gtimeout); si no hay ninguno,
+# correr agy con un kill por si acaso (el proxy termina el exchange igual)
+TMO=$(command -v timeout || command -v gtimeout || true)
+if [ -n "$TMO" ]; then
+  env HTTPS_PROXY=http://127.0.0.1:18999 SSL_CERT_FILE="$D/ca.pem" "$TMO" 25 agy -p "di solo: ok" >/dev/null 2>&1 || true
+else
+  env HTTPS_PROXY=http://127.0.0.1:18999 SSL_CERT_FILE="$D/ca.pem" agy -p "di solo: ok" >/dev/null 2>&1 &
+  AGP=$!
+  ( sleep 25; kill -9 "$AGP" 2>/dev/null ) &
+  wait "$AGP" 2>/dev/null || true
+  kill -9 "$AGP" 2>/dev/null || true
+fi
 sleep 1
 kill -9 $MP 2>/dev/null || true
 
