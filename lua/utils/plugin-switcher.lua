@@ -421,6 +421,134 @@ local function is_plugin_disabled(plugin_key)
   return vim.fn.filereadable(disabled_file_path) == 1
 end
 
+-- ── 🎛  Presets de neocursor (modo = host/usage_host) ──────────────
+-- Cada modo reescribe `host` y `usage_host` en lua/plugins/neocursor.lua.
+-- LÓGICA CONDICIONAL (ciclo include-toggle):
+--   · neocursor ya activo en ESTE modo → desactivar (mueve a disabled/)
+--   · neocursor off o en OTRO modo      → activar/cambiar a este modo
+local NEOCURSOR_FILE = "neocursor.lua"
+local NEOCURSOR_PRESETS = {
+  ["cursor"] = { host = "cursor", usage_host = "cursor" },
+  ["antigravity"] = { host = "antigravity", usage_host = "antigravity" },
+  ["antigravity-tui"] = { host = "antigravity", usage_host = "antigravity-tui" },
+}
+
+-- ¿Dónde vive neocursor.lua hoy? (plugins/ activo · disabled/ off)
+local function neocursor_active_file()
+  local active = get_plugins_path() .. "/" .. NEOCURSOR_FILE
+  if vim.fn.filereadable(active) == 1 then
+    return active, true
+  end
+  local dis = get_disabled_path() .. "/" .. NEOCURSOR_FILE
+  if vim.fn.filereadable(dis) == 1 then
+    return dis, false
+  end
+  return active, true -- asume activo si no existe en ningún lado
+end
+
+-- Estado actual: { enabled, host, usage_host }
+local function neocursor_current()
+  local file, enabled = neocursor_active_file()
+  local host, usage_host = "cursor", "cursor"
+  if vim.fn.filereadable(file) == 1 then
+    for _, line in ipairs(vim.fn.readfile(file)) do
+      if not line:match("^%s*%-%-") then -- ignorar comentarios
+        local h = line:match('host%s*=%s*"([^"]+)"%s*,')
+        if h then
+          host = h
+        end
+        local uh = line:match('usage_host%s*=%s*"([^"]+)"%s*,')
+        if uh then
+          usage_host = uh
+        end
+      end
+    end
+  end
+  return { enabled = enabled, host = host, usage_host = usage_host }, file
+end
+
+-- Reescribe host/usage_host en el archivo activo de neocursor.
+local function neocursor_apply(mode)
+  local preset = NEOCURSOR_PRESETS[mode]
+  if not preset then
+    return false
+  end
+  local cur, _ = neocursor_current()
+  -- si está off, primero reactivar (mover de disabled/ a plugins/)
+  if not cur.enabled then
+    move_plugin("neocursor", false)
+  end
+  local f, _ = neocursor_active_file()
+  if vim.fn.filereadable(f) ~= 1 then
+    vim.notify("⚠️ neocursor.lua no encontrado", vim.log.levels.ERROR)
+    return false
+  end
+  local content = vim.fn.readfile(f)
+  local host_str = ('host = "%s",'):format(preset.host)
+  local usage_str = ('usage_host = "%s",'):format(preset.usage_host)
+  local changed = false
+  for i, line in ipairs(content) do
+    if line:match('^%s*host%s*=%s*"[^"]*"%s*,') then
+      if not line:find(host_str, 1, true) then
+        content[i] = line:gsub('host%s*=%s*"[^"]*"', ('host = "%s"'):format(preset.host))
+        changed = true
+      end
+    elseif line:match('^%s*usage_host%s*=%s*"[^"]*"%s*,') then
+      if not line:find(usage_str, 1, true) then
+        content[i] = line:gsub('usage_host%s*=%s*"[^"]*"', ('usage_host = "%s"'):format(preset.usage_host))
+        changed = true
+      end
+    end
+  end
+  if changed then
+    vim.fn.writefile(content, f)
+  end
+  return true
+end
+
+-- ⭐ FUNCIÓN PÚBLICA: preset de neocursor (ciclo include-toggle)
+function M.preset_neocursor(mode)
+  local preset = NEOCURSOR_PRESETS[mode]
+  if not preset then
+    vim.notify("⚠️ Modo neocursor desconocido: " .. tostring(mode), vim.log.levels.ERROR)
+    return
+  end
+  local cur, _ = neocursor_current()
+  local label = mode == "antigravity-tui" and "antigravity-tui (agy TUI)" or mode
+  if cur.enabled and cur.host == preset.host and cur.usage_host == preset.usage_host then
+    move_plugin("neocursor", true)
+    vim.notify("󱙝 neocursor ❌ desactivado (modo " .. label .. ")", vim.log.levels.INFO)
+    return
+  end
+  neocursor_apply(mode)
+  vim.notify("󱙝 neocursor → modo " .. label .. "\n🔄 Reinicia Neovim para aplicar", vim.log.levels.INFO)
+end
+
+-- ⭐ FUNCIÓN PÚBLICA: abrir el selector de modo neocursor directo
+function M.neocursor_mode_picker()
+  local cur, _ = neocursor_current()
+  local choices = {}
+  local map = {}
+  for mode, preset in pairs(NEOCURSOR_PRESETS) do
+    local active = cur.enabled and cur.host == preset.host and cur.usage_host == preset.usage_host
+    local mark = active and "󰗠  |" or (not cur.enabled and "🚫  |" or "  |")
+    local label = mode == "antigravity-tui" and "Antigravity TUI (agy /usage)"
+      or (mode == "antigravity" and "Antigravity (RPC usage)" or "Cursor")
+    local choice = ("  %s 󱙝 %s"):format(mark, label)
+    table.insert(choices, choice)
+    map[choice] = mode
+  end
+  table.insert(choices, "󰜺 Cancelar")
+  vim.ui.select(choices, {
+    prompt = "󱙝 neocursor · backend del tab / usage :",
+  }, function(choice)
+    if not choice or choice:match("󰜺") then
+      return
+    end
+    M.preset_neocursor(map[choice])
+  end)
+end
+
 -- ⭐ FUNCIÓN PÚBLICA: Toggle plugin
 function M.toggle_plugin(plugin_key)
   local is_disabled = is_plugin_disabled(plugin_key)
@@ -492,6 +620,18 @@ function M.interactive_toggle()
         local choice_text = "  " .. status .. " " .. item.config.icon .. " " .. item.config.name
         table.insert(choices, choice_text)
         choices_map[choice_text] = item.key
+        -- Entrada extra: neocursor tiene presets de modo (host/usage_host).
+        if item.key == "neocursor" then
+          local cur, _ = neocursor_current()
+          local mode = cur.host
+          if cur.host == "antigravity" and cur.usage_host == "antigravity-tui" then
+            mode = "antigravity-tui"
+          end
+          local mode_status = cur.enabled and ("󰗠 " .. mode) or "🚫 (off)"
+          local mode_text = ("    ⚙️   modo: %s"):format(mode_status)
+          table.insert(choices, mode_text)
+          choices_map[mode_text] = "__neocursor_mode__"
+        end
       end
     end
   end
@@ -510,6 +650,10 @@ function M.interactive_toggle()
     end
 
     local plugin_key = choices_map[choice]
+    if plugin_key == "__neocursor_mode__" then
+      M.neocursor_mode_picker()
+      return
+    end
     if plugin_key then
       M.toggle_plugin(plugin_key)
     end
