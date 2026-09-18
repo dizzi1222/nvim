@@ -339,13 +339,17 @@ vim.keymap.set("n", "<leader>M", "<cmd>MCP<CR>", { desc = "  MCP HUB" }) -
 
 -- =============================
 -- ENGRAM - Memoria persistente para IA
+-- Autodetección de proyecto por cwd; fallback al default (dotfiles-dizzi).
+-- Los resúmenes de sesión SIEMPRE van a dotfiles-dizzi.
 -- =============================
--- <leader>ems = save memory
--- <leader>emc = show context
--- <leader>emf = search memory
--- <leader>eml = save lesson
--- <leader>emp = save pattern
--- <leader>emsess = save session summary
+-- <leader>em*  → grupaje largo (em)
+-- <leader>m*   → espejo corto (no choca con markdown: mr/me/md/mv)
+--   save memory   → ems / ms
+--   save lesson   → eml / ml
+--   save pattern  → emp / mp
+--   context       → emc / mc
+--   search        → emf / mf
+--   session sum   → emsess / mS  (dotfiles-dizzi fijo)
 vim.keymap.set("n", "<leader>ems", function()
   local title = vim.fn.input("Title: ")
   if title == "" then
@@ -355,8 +359,8 @@ vim.keymap.set("n", "<leader>ems", function()
   if msg == "" then
     return
   end
-  vim.fn.system('engram save "' .. title .. '" "' .. msg .. '" --type lesson --project jscamp')
-  vim.notify("Saved to Engram (jscamp)")
+  vim.fn.system('engram save "' .. title .. '" "' .. msg .. '" --type lesson')
+  vim.notify("Saved to Engram (proyecto detectado)")
 end, { desc = "Engram: Save memory" })
 
 vim.keymap.set("n", "<leader>eml", function()
@@ -368,7 +372,7 @@ vim.keymap.set("n", "<leader>eml", function()
   if msg == "" then
     return
   end
-  vim.fn.system('engram save "Lección: ' .. title .. '" "' .. msg .. '" --type lesson --project jscamp')
+  vim.fn.system('engram save "Lección: ' .. title .. '" "' .. msg .. '" --type lesson')
   vim.notify("Lesson saved to Engram")
 end, { desc = "Engram: Save lesson" })
 
@@ -381,7 +385,7 @@ vim.keymap.set("n", "<leader>emp", function()
   if msg == "" then
     return
   end
-  vim.fn.system('engram save "Patrón: ' .. title .. '" "' .. msg .. '" --type pattern --project jscamp')
+  vim.fn.system('engram save "Patrón: ' .. title .. '" "' .. msg .. '" --type pattern')
   vim.notify("Pattern saved to Engram")
 end, { desc = "Engram: Save pattern" })
 
@@ -390,12 +394,12 @@ vim.keymap.set("n", "<leader>emsess", function()
   if msg == "" then
     return
   end
-  vim.fn.system('engram save "Resumen de sesión" "' .. msg .. '" --type session-summary --project jscamp')
-  vim.notify("Session summary saved")
+  vim.fn.system('engram save "Resumen de sesión" "' .. msg .. '" --type session-summary --project dotfiles-dizzi')
+  vim.notify("Session summary saved (dotfiles-dizzi)")
 end, { desc = "Engram: Save session summary" })
 
 vim.keymap.set("n", "<leader>emc", function()
-  local result = vim.fn.system("engram context --project jscamp")
+  local result = vim.fn.system("engram context")
   vim.notify(result)
 end, { desc = "Engram: Show context" })
 
@@ -404,7 +408,70 @@ vim.keymap.set("n", "<leader>emf", function()
   if query == "" then
     return
   end
-  local result = vim.fn.system('engram search "' .. query .. '" --project jscamp')
+  local result = vim.fn.system('engram search "' .. query .. '"')
+  vim.notify(result)
+end, { desc = "Engram: Search memory" })
+
+-- ── Espejo corto <leader>m (letras libres de markdown: c/f/l/p/s/S) ──
+vim.keymap.set("n", "<leader>ms", function()
+  local title = vim.fn.input("Title: ")
+  if title == "" then
+    return
+  end
+  local msg = vim.fn.input("Message: ")
+  if msg == "" then
+    return
+  end
+  vim.fn.system('engram save "' .. title .. '" "' .. msg .. '" --type lesson')
+  vim.notify("Saved to Engram (proyecto detectado)")
+end, { desc = "Engram: Save memory" })
+
+vim.keymap.set("n", "<leader>ml", function()
+  local title = vim.fn.input("Lesson title: ")
+  if title == "" then
+    return
+  end
+  local msg = vim.fn.input("Lesson content: ")
+  if msg == "" then
+    return
+  end
+  vim.fn.system('engram save "Lección: ' .. title .. '" "' .. msg .. '" --type lesson')
+  vim.notify("Lesson saved to Engram")
+end, { desc = "Engram: Save lesson" })
+
+vim.keymap.set("n", "<leader>mp", function()
+  local title = vim.fn.input("Pattern title: ")
+  if title == "" then
+    return
+  end
+  local msg = vim.fn.input("Pattern description: ")
+  if msg == "" then
+    return
+  end
+  vim.fn.system('engram save "Patrón: ' .. title .. '" "' .. msg .. '" --type pattern')
+  vim.notify("Pattern saved to Engram")
+end, { desc = "Engram: Save pattern" })
+
+vim.keymap.set("n", "<leader>mS", function()
+  local msg = vim.fn.input("Session summary: ")
+  if msg == "" then
+    return
+  end
+  vim.fn.system('engram save "Resumen de sesión" "' .. msg .. '" --type session-summary --project dotfiles-dizzi')
+  vim.notify("Session summary saved (dotfiles-dizzi)")
+end, { desc = "Engram: Save session summary" })
+
+vim.keymap.set("n", "<leader>mc", function()
+  local result = vim.fn.system("engram context")
+  vim.notify(result)
+end, { desc = "Engram: Show context" })
+
+vim.keymap.set("n", "<leader>mf", function()
+  local query = vim.fn.input("Search: ")
+  if query == "" then
+    return
+  end
+  local result = vim.fn.system('engram search "' .. query .. '"')
   vim.notify(result)
 end, { desc = "Engram: Search memory" })
 

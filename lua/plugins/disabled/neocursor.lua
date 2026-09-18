@@ -1,25 +1,23 @@
 -- 👻 neocursor.nvim — Cursor Tab-Tab-Tab real en Neovim
--- ⚠️ EL TAB ES SIEMPRE DE CURSOR: `host` es el backend REAL del ghost (hoy solo
--- existe "cursor"; "antigravity" sin sidecar cae a Cursor con WARN en el log).
--- Usa la sesión REAL de la app Cursor (instalada y firmada): nada de API keys.
--- Requiere: app Cursor instalada + `uv` en PATH (ambos en work.nix).
--- El <leader>C (usage) es INDEPENDIENTE del tab y usa `usage_host`:
---   "cursor"        → tabla del plan de Cursor (con link al dashboard)
---   "antigravity"   → `agy /usage` en TUI (float-terminal)
--- Podrás borrar Cursor recién cuando exista el sidecar de supercomplete de
--- Antigravity (ruta B, mismo backend PredictionService del CLI) — pendiente.
--- Referencia de keymaps: copilot.lua (set de atajos NES) para consistencia.
+-- 🎛 HAY 3 PRESETS de modo (host + usage_host) gestionados desde
+-- lua/utils/plugin-switcher.lua ("neocursor · modo" en Space D, o
+-- M.preset_neocursor("cursor"|"antigravity"|"antigravity-tui")):
+--   cursor           → host=cursor · usage_host=cursor          (backend + usage Cursor)
+--   antigravity      → host=antigravity · usage_host=antigravity (tab tab_flash + RPC usage)
+--   antigravity-tui  → host=antigravity · usage_host=antigravity-tui (tab + agy /usage TUI)
+-- Lógica cycle-include-toggle: elegir el modo activo lo APAGA; cambiarlo lo activa.
+-- <leader>C (usage) es INDEPENDIENTE del tab y usa `usage_host` (ver arriba).
 -- Referencia de keymaps: copilot.lua (set de atajos NES) para consistencia.
 return {
   -- 1. Apuntar a tu fork con los parches nativos
   "dizzi1222/neocursor.nvim",
-  -- commit = "020e763b", -- Opcional: Lazy.nvim descargará siempre lo último de main.
+  -- commit = "639ca25", -- Opcional: Lazy.nvim descargará siempre lo último de main.
 
   event = "VeryLazy", -- Cargar al arranque: NO InsertEnter (bloquea el disparo en normal)
   opts = {
-    -- 🔀 BACKEND REAL del cursortab. Solo "cursor" existe HOY: con "antigravity"
-    -- el fork no tiene sidecar y cae a sidecar.py (Cursor) con WARN en el log —
-    -- el Tab SIEMPRE fue de Cursor. (Ruta B = sidecar de supercomplete, pendiente).
+    -- 🔀 BACKEND REAL del cursortab (gestionado por los presets de modo):
+    --   "cursor"       → app Cursor (StreamCpp, sesión firmada local)
+    --   "antigravity"  → app Antigravity (tab_flash_lite_preview Supercomplete)
     host = "cursor",
     -- 🖥️ Qué HOST alimenta <leader>C (usage):
     --   "cursor"           → tabla del plan de Cursor (cursor_usage.py)
@@ -27,7 +25,7 @@ return {
     --                         reset; token en antigravity_token (0600, recapturable
     --                         con capture_anty_token.sh)
     --   "antigravity-tui"  → float-terminal `agy /usage` (TUI completa)
-    usage_host = "cursor", -- "antigravity" | "antigravity-tui" | "cursor"
+    usage_host = "antigravity", -- "antigravity" | "antigravity-tui" | "cursor"
     -- NO mapear <Tab> (lo gestionan Supermaven/blink en INSERT).
     -- Aceptar ghost text / saltos con el mismo set de atajos estilo NES.
     map_tab = false,

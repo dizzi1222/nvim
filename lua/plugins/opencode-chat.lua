@@ -115,6 +115,182 @@ local function focus_opencode()
   end
 end
 
+-- ── Engram: memoria persistente ────────────────────────────────────────────
+-- Autodetección de proyecto por cwd; el resumen de sesión SIEMPRE a dotfiles-dizzi.
+-- Espejos: <leader>em* (largo) y <leader>m* (corto, sin chocar con markdown).
+local function eng_save(title, msg)
+  if title == "" or msg == "" then
+    return
+  end
+  vim.fn.system('engram save "' .. title .. '" "' .. msg .. '" --type lesson')
+  vim.notify("Saved to Engram (proyecto detectado)")
+end
+
+local function eng_save_lesson()
+  local title = vim.fn.input("Lesson title: ")
+  if title == "" then
+    return
+  end
+  local msg = vim.fn.input("Lesson content: ")
+  eng_save("Lección: " .. title, msg)
+end
+
+local function eng_save_pattern()
+  local title = vim.fn.input("Pattern title: ")
+  if title == "" then
+    return
+  end
+  local msg = vim.fn.input("Pattern description: ")
+  if msg == "" then
+    return
+  end
+  vim.fn.system('engram save "Patrón: ' .. title .. '" "' .. msg .. '" --type pattern')
+  vim.notify("Pattern saved to Engram")
+end
+
+local function eng_session_summary()
+  local msg = vim.fn.input("Session summary: ")
+  if msg == "" then
+    return
+  end
+  vim.fn.system('engram save "Resumen de sesión" "' .. msg .. '" --type session-summary --project dotfiles-dizzi')
+  vim.notify("Session summary saved (dotfiles-dizzi)")
+end
+
+local function eng_context()
+  vim.notify(vim.fn.system("engram context"))
+end
+
+local function eng_search()
+  local query = vim.fn.input("Search: ")
+  if query == "" then
+    return
+  end
+  vim.notify(vim.fn.system('engram search "' .. query .. '"'))
+end
+
+-- ── Transcript en float (<leader>so / <leader>sO) ──────────────────────────
+-- Vuelca el transcript markdown de una sesión opencode leyendo literal la DB
+-- (~/.local/share/opencode/*.db) con el helper opencode_transcript.py, que
+-- replica el formato EXACTO del /copy del TUI (headers `## User` /
+-- `## Assistant (Agent · Model · tiempo)`, `_Thinking:_` y tools).
+--   <leader>so → sesión más activa (time_updated)
+--   <leader>sO → selector de sesiones (vía --list) y abre la elegida
+-- No depende del clipboard ni del foco de la TUI (el flujo /copy era frágil).
+local OC_TRANSCRIPT_PY = vim.fn.stdpath("config") .. "/opencode_transcript.py"
+
+local function oc_open_transcript_float(session_id)
+  local tmp = "/tmp/copy.md"
+  local buf = vim.fn.bufadd(tmp)
+  vim.bo[buf].filetype = "markdown"
+  local cols, rows = vim.o.columns, vim.o.lines
+  local width = math.min(120, cols - 6)
+  local height = math.min(40, rows - 6)
+  local title = session_id and ("󱙔 opencode transcript — " .. session_id:sub(1, 8))
+    or "󱙔 opencode transcript — /tmp/copy.md"
+  local win = vim.api.nvim_open_win(buf, true, {
+    relative = "editor",
+    style = "minimal",
+    border = "rounded",
+    width = width,
+    height = height,
+    row = math.max(0, math.floor((rows - height) / 2) - 1),
+    col = math.max(0, math.floor((cols - width) / 2)),
+    title = title,
+    title_pos = "center",
+  })
+  vim.wo[win].number = true
+  if vim.fn.filereadable(tmp) == 1 then
+    vim.cmd("edit " .. tmp)
+  end
+  vim.schedule(function()
+    vim.cmd("normal! gg")
+  end)
+  -- q / Esc cierran el float; la búsqueda nativa (/ ? n N) funciona de serie.
+  vim.keymap.set("n", "q", "<cmd>close<CR>", { buffer = buf, desc = "Cerrar transcript" })
+  vim.keymap.set("n", "<Esc>", "<cmd>close<CR>", { buffer = buf, desc = "Cerrar transcript" })
+end
+
+local function oc_transcript_float(session_id)
+  if vim.fn.filereadable(OC_TRANSCRIPT_PY) ~= 1 then
+    vim.notify("󱙔 Falta " .. OC_TRANSCRIPT_PY, vim.log.levels.WARN)
+    return
+  end
+
+  local args = { "python3", OC_TRANSCRIPT_PY }
+  if session_id then
+    vim.list_extend(args, { "--session", session_id })
+  end
+  local out = {}
+  vim.fn.jobstart(args, {
+    stdout_buffered = true,
+    on_stdout = function(_, d)
+      if d then
+        vim.list_extend(out, d)
+      end
+    end,
+    on_exit = function(_, code)
+      vim.schedule(function()
+        if code ~= 0 then
+          vim.notify("󱙔 opencode_transcript.py falló (código " .. code .. ")", vim.log.levels.WARN)
+          return
+        end
+        if #out == 0 or vim.fn.filereadable("/tmp/copy.md") ~= 1 then
+          vim.notify("󱙔 Sin transcript: no hay sesión opencode", vim.log.levels.WARN)
+          return
+        end
+        oc_open_transcript_float(session_id)
+      end)
+    end,
+  })
+end
+
+-- Selector de sesiones (rápido y simple): lista las sesiones con su último
+-- título y fecha, y abre el transcript de la elegida en el float.
+local function oc_select_transcript()
+  if vim.fn.filereadable(OC_TRANSCRIPT_PY) ~= 1 then
+    vim.notify("󱙔 Falta " .. OC_TRANSCRIPT_PY, vim.log.levels.WARN)
+    return
+  end
+
+  local items = {}
+  vim.fn.jobstart({ "python3", OC_TRANSCRIPT_PY, "--list" }, {
+    stdout_buffered = true,
+    on_stdout = function(_, d)
+      if d then
+        vim.list_extend(items, d)
+      end
+    end,
+    on_exit = function(_, code)
+      vim.schedule(function()
+        if code ~= 0 or #items == 0 then
+          vim.notify("󱙔 Sin sesiones opencode en la DB", vim.log.levels.WARN)
+          return
+        end
+        local choices = {}
+        local map = {}
+        for _, line in ipairs(items) do
+          local id, title, created, _, texts = line:match("([^|]+)|([^|]*)|([^|]*)|[^|]*|([^|]*)")
+          local label = title ~= "" and title or "(sin título)"
+          if #label > 60 then
+            label = label:sub(1, 57) .. "…"
+          end
+          local choice = ("󱙔 %s  ·  %s  ·  %s msgs"):format(label, created, texts or "0")
+          choices[#choices + 1] = choice
+          map[choice] = id
+        end
+        vim.ui.select(choices, {
+          prompt = "󱙔 Seleccioná sesión opencode:",
+        }, function(choice)
+          if choice and map[choice] then
+            oc_transcript_float(map[choice])
+          end
+        end)
+      end)
+    end,
+  })
+end
+
 return {
   -- 1. Apuntar a tu fork con los parches nativos
   "dizzi1222/opencode.nvim",
@@ -341,8 +517,85 @@ return {
       mode = { "n" },
       desc = "󰮮 Continue (abre opencode --continue en 4096)",
     },
+    {
+      "<leader>so",
+      oc_transcript_float,
+      mode = { "n" },
+      desc = "󱙔 Open transcript (buscable) en float",
+    },
+    {
+      "<leader>sO",
+      oc_select_transcript,
+      mode = { "n" },
+      desc = "󱙔 Seleccionar sesión y abrir transcript",
+    },
 
-    -- ── Menú de prompts [Redundante, existe visual <leader>ap]──────────────────────────────────────
+    -- ── Engram: Memoria persistente ────────────────────────────
+    -- <leader>em*  → grupal largo  |  <leader>m*  → espejo corto (sin chocar con markdown)
+    {
+      "<leader>ems",
+      function()
+        eng_save(vim.fn.input("Title: "), vim.fn.input("Message: "))
+      end,
+      desc = "󰍛 Engram: Save memory",
+    },
+    {
+      "<leader>ms",
+      function()
+        eng_save(vim.fn.input("Title: "), vim.fn.input("Message: "))
+      end,
+      desc = "󰍛 Engram: Save memory",
+    },
+    {
+      "<leader>eml",
+      eng_save_lesson,
+      desc = "󰍛 Engram: Save lesson",
+    },
+    {
+      "<leader>ml",
+      eng_save_lesson,
+      desc = "󰍛 Engram: Save lesson",
+    },
+    {
+      "<leader>emp",
+      eng_save_pattern,
+      desc = "󰍛 Engram: Save pattern",
+    },
+    {
+      "<leader>mp",
+      eng_save_pattern,
+      desc = "󰍛 Engram: Save pattern",
+    },
+    {
+      "<leader>emsess",
+      eng_session_summary,
+      desc = "󰍛 Engram: Save session summary",
+    },
+    {
+      "<leader>mS",
+      eng_session_summary,
+      desc = "󰍛 Engram: Save session summary",
+    },
+    {
+      "<leader>emc",
+      eng_context,
+      desc = "󰍛 Engram: Show context",
+    },
+    {
+      "<leader>mc",
+      eng_context,
+      desc = "󰍛 Engram: Show context",
+    },
+    {
+      "<leader>emf",
+      eng_search,
+      desc = "󰍛 Engram: Search memory",
+    },
+    {
+      "<leader>mf",
+      eng_search,
+      desc = "󰍛 Engram: Search memory",
+    },
   },
 
   config = function()
@@ -443,6 +696,8 @@ return {
         { "<leader>af", icon = { icon = "" } },
         { "<leader>ab", icon = { icon = "" } },
         { "<leader>aB", icon = { icon = "" } },
+        { "<leader>so", icon = { icon = "󱙔" } },
+        { "<leader>sO", icon = { icon = "󱙔" } },
         -- Engram: Memory Persistent [Opencode, AI] + Atajos en: @plugins/which-key.lua:L23
       })
     end
