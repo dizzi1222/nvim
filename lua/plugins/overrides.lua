@@ -40,6 +40,11 @@ return {
           end,
         },
         lua_ls = {
+          -- En Termux NO lo instala Mason (su unico asset es `linux_arm64_gnu` y
+          -- ahi la libc no se detecta -> "The current platform is unsupported").
+          -- Viene del repo de Termux: `pkg install lua-language-server`.
+          -- Mismo patron que nil_ls mas abajo: cmd explicito + mason = false.
+          cmd = { "lua-language-server" },
           mason = false,
         },
         nil_ls = {
