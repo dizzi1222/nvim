@@ -18,7 +18,7 @@ return {
     -- 🔀 BACKEND REAL del cursortab (gestionado por los presets de modo):
     --   "cursor"       → app Cursor (StreamCpp, sesión firmada local)
     --   "antigravity"  → app Antigravity (tab_flash_lite_preview Supercomplete)
-    host = "cursor",
+    host = "antigravity",
     -- 🖥️ Qué HOST alimenta <leader>C (usage):
     --   "cursor"           → tabla del plan de Cursor (cursor_usage.py)
     --   "antigravity"      → RPC del CLI (antigravity_usage.py): quota por grupo +

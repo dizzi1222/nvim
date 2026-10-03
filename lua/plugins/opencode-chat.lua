@@ -93,25 +93,78 @@ local function open_opencode()
   end
 end
 
--- Toggle real: muestra si está oculta, oculta si está visible, crea si no existe.
-local function toggle_opencode()
-  cleanup_dead_opencode()
-  local term = find_opencode_term()
-  if term then
-    term:toggle()
-  else
-    open_opencode()
+-- Busca el buffer terminal del opencode TUI con job vivo. NO depende de
+-- snacks.terminal: si snacks perdió el registro del terminal, igual lo encontramos.
+--
+-- ⚠ Orden importa: esta función debe estar DEFINIDA antes de `toggle_opencode` y
+-- `focus_opencode`, que la llaman. En Lua una local usada antes de existir es nil.
+local function find_opencode_buf()
+  for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+    if vim.bo[buf].buftype == "terminal" and vim.api.nvim_buf_get_name(buf):match("opencode") then
+      local chan = vim.bo[buf].channel
+      if chan and chan > 0 then
+        return buf
+      end
+    end
   end
+  return nil
 end
 
 -- Focus: muestra y enfoca la terminal ya creada (o la crea si no hay ninguna).
+-- Idempotente: da igual si la ventana está visible, oculta o en otra tab —
+-- siempre termina mostrando + enfocando en UNA sola pulsación.
 local function focus_opencode()
   cleanup_dead_opencode()
+
+  local buf = find_opencode_buf()
+  if not buf then
+    open_opencode()
+    return
+  end
+
+  -- 1) Si snacks todavía conoce la terminal, que la muestre él: restaura el layout
+  --    con el que fue creada (si no, el TUI queda squeezed y se ve con líneas).
   local term = find_opencode_term()
   if term then
     term:show():focus()
-  else
+    return
+  end
+
+  -- 2) Fallback sin snacks. Split HORIZONTAL a propósito: un `vsplit` deja el TUI
+  --    en media pantalla de ancho y el output se parte en líneas ilegibles.
+  local win = vim.fn.bufwinid(buf)
+  if win == -1 or not vim.api.nvim_win_is_valid(win) then
+    vim.cmd("botright split")
+    win = vim.api.nvim_get_current_win()
+    vim.api.nvim_win_set_buf(win, buf)
+    pcall(vim.api.nvim_win_set_height, win, math.max(20, math.floor(vim.o.lines * 0.6)))
+  end
+  vim.api.nvim_set_current_win(win)
+  vim.cmd("startinsert")
+end
+
+-- Toggle inteligente: "si estoy viendo opencode → oculto; si no → lo muestro y
+-- enfoco". Con el `term:toggle()` de snacks hay que pulsar 2 veces cuando la
+-- ventana quedó en otra tab: la 1ª oculta/no hace nada visible, la 2ª muestra.
+-- Este toggle decide por visibilidad REAL, así que siempre es 1 pulsación.
+local function toggle_opencode()
+  cleanup_dead_opencode()
+
+  local buf = find_opencode_buf()
+  if not buf then
     open_opencode()
+    return
+  end
+
+  local win = vim.fn.bufwinid(buf)
+  local visible_here = win ~= -1
+    and vim.api.nvim_win_is_valid(win)
+    and vim.api.nvim_win_get_tabpage(win) == vim.api.nvim_get_current_tabpage()
+
+  if visible_here then
+    pcall(vim.api.nvim_win_hide, win)
+  else
+    focus_opencode()
   end
 end
 

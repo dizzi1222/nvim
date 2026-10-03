@@ -48,76 +48,102 @@ vim.keymap.set("n", "<C-q>", function()
 end, { noremap = true, silent = true, desc = "Borrar buffer manteniendo ventana" })
 
 -- =============================
--- CERRAR BUFFERS INTELIGENTE (+split)
--- Equivalente a: <leader>bD
+-- 🛑 CERRAR PESTAÑA / SPLIT + BUFFER
+-- Prioridad: split > tab > buffer (fallback MRU)
 -- =============================
---🛑 🗿 Cerrar pestaña Y buffer
+
+-- Ventanas especiales (no-file) que se cierran a sí mismas
+local special_filetypes = {
+  "neo-tree",
+  "NvimTree",
+  "help",
+  "qf",
+  "quickfix",
+  "terminal",
+  "Avante",
+  "AvanteInput",
+  "AvanteAsk",
+  "AvanteSelectedFiles",
+  "copilot-chat",
+  "opencode_output",
+  "opencode_input",
+}
+
+--- Determina si el buffer actual pertenece a una ventana especial (no-file)
+---@param buftype string buftype del buffer actual
+---@param filetype string filetype del buffer actual
+---@return boolean
+local function is_special_win(buftype, filetype)
+  return vim.tbl_contains(special_filetypes, filetype) or buftype ~= ""
+end
+
+--- Cierra el split de una ventana especial y borra su buffer.
+--- Si es la única ventana, reemplaza el contenido en vez de cerrar.
+---@param bufnr number buffer especial a cerrar
+local function close_special(bufnr)
+  if vim.fn.winnr("$") > 1 then
+    local wins_before = vim.fn.winnr("$")
+    pcall(vim.cmd, "close")
+    -- Solo borrar si el split realmente se cerró
+    if vim.fn.winnr("$") < wins_before and vim.api.nvim_buf_is_valid(bufnr) then
+      pcall(vim.api.nvim_buf_delete, bufnr, { force = true })
+    end
+  else
+    -- Última ventana: no se puede close → reemplazar contenido y borrar
+    local prev = get_prev_buffer()
+    if prev then
+      vim.api.nvim_win_set_buf(0, prev)
+    else
+      vim.cmd("enew")
+    end
+    if vim.api.nvim_buf_is_valid(bufnr) then
+      pcall(vim.api.nvim_buf_delete, bufnr, { force = true })
+    end
+  end
+end
+
 keymap.set("n", "<M-q>", function()
-  local buftype = vim.bo.buftype
-  local filetype = vim.bo.filetype
   local bufnr = vim.api.nvim_get_current_buf()
 
-  -- Lista de ventanas especiales
-  local special_filetypes = {
-    "neo-tree",
-    "NvimTree",
-    "help",
-    "qf",
-    "quickfix",
-    "terminal",
-    "Avante",
-    "AvanteInput",
-    "AvanteAsk",
-    "AvanteSelectedFiles",
-    "copilot-chat",
-    "opencode_output",
-    "opencode_input",
-  }
-
-  -- Verificar si es ventana especial
-  local is_special = vim.tbl_contains(special_filetypes, filetype) or buftype ~= ""
-
-  if is_special then
-    -- Cerrar ventana especial
-    pcall(vim.cmd, "close")
-
-    -- Eliminar buffer después de cerrar
-    vim.defer_fn(function()
-      if vim.api.nvim_buf_is_valid(bufnr) and vim.api.nvim_buf_is_loaded(bufnr) then
-        pcall(function()
-          vim.api.nvim_buf_delete(bufnr, { force = true })
-        end)
-      end
-    end, 100)
+  -- 1) Ventana especial → cerrar split + borrar buffer
+  if is_special_win(vim.bo.buftype, vim.bo.filetype) then
+    close_special(bufnr)
     return
   end
 
-  -- Asegurar un buffer sobreviviente antes de cerrar la ventana
+  -- 2) Más de una ventana en esta tab → cerrar el split y borrar el buffer
+  if vim.fn.winnr("$") > 1 then
+    local wins_before = vim.fn.winnr("$")
+    vim.cmd("confirm close")
+    if vim.fn.winnr("$") < wins_before and vim.api.nvim_buf_is_valid(bufnr) then
+      vim.cmd("silent! bdelete! " .. bufnr)
+    end
+    return
+  end
+
+  -- 3) Única ventana pero más de una tab → cerrar la pestaña y borrar el buffer
+  if vim.fn.tabpagenr("$") > 1 then
+    local tabs_before = vim.fn.tabpagenr("$")
+    vim.cmd("confirm tabclose")
+    if vim.fn.tabpagenr("$") < tabs_before and vim.api.nvim_buf_is_valid(bufnr) then
+      vim.cmd("silent! bdelete! " .. bufnr)
+    end
+    return
+  end
+
+  -- 4) Última ventana → saltar al MRU y borrar el buffer
   local prev = get_prev_buffer()
   if prev then
     vim.api.nvim_win_set_buf(0, prev)
   else
     vim.cmd("enew")
   end
-
-  -- Cerrar la ventana (split) solo si hay más de una abierta
-  if vim.fn.winnr("$") > 1 then
-    vim.cmd("close")
-  end
-
-  -- Borrar el buffer original (ya no se muestra en ninguna ventana)
   if vim.api.nvim_buf_is_valid(bufnr) then
-    vim.cmd("bdelete " .. bufnr)
+    vim.cmd("confirm bdelete " .. bufnr)
   end
-
-  -- Opción destructiva: cerrar la ventana aunque sea la única (sale de nvim)
-  -- if vim.fn.winnr("$") == 1 then
-  --   vim.cmd("quit!")
-  -- end
 end, {
   noremap = true,
-  silent = true,
-  desc = "🛑 Cerrar split Y borrar buffer",
+  desc = "🛑 Cerrar tab/split y borrar buffer",
 })
 
 -- =============================

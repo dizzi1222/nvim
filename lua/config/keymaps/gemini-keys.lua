@@ -13,14 +13,14 @@
 --     <leader>agt / v<leader>Gt / v<leader>ggt    toggle (no slash)       <leader>agp / <leader>Gp /plan
 --     <leader>agL / <leader>GL / <leader>gL       /goal                   <leader>agl / <leader>Gl /resume (switch)
 --     <leader>agn / v<leader>Gn / v<leader>ggn    /clear (new)            <leader>agc / <leader>Gc /clear (clean)
---     <leader>agf / v<leader>Gf / v<leader>ggf    /fork (branch)          <leader>agm / <leader>Gm /model
+--     <leader>agf / v<leader>Gf / v<leader>ggf    focus agy          <leader>agm / <leader>Gm /model
 --     <leader>agq / v<leader>Gq / v<leader>ggq    /exit (quit)            <leader>agd / <leader>Gd /diff
 --     <leader>agk / v<leader>Gk / v<leader>ggk    /context                <leader>agw / <leader>Gw /btw
 --     <leader>agw / v<leader>Gw / v<leader>ggw    /btw                    <leader>age / <leader>Ge /grill-me
 --     <leader>ags / v<leader>Gs / v<leader>ggs    /skills                 <leader>ago / <leader>Go /ggo  focus agy
 --     <leader>agr / v<leader>Gr / v<leader>ggr    /rename                 <leader>agC / <leader>GC /changelog
 --     <leader>agx / v<leader>Gx / v<leader>ggx    interrumpir             <leader>agP / <leader>GP /ggP menú
---     <leader>ago / v<leader>Go / v<leader>ggo    focus agy               <leader>agF / <leader>GF /ggF fork
+--     <leader>ago / v<leader>Go / v<leader>ggo    focus agy               <leader>agF / <leader>GF /ggF /fork (branch)
 --     <leader>agO / v<leader>GO / v<leader>ggO    open agy                <leader>agu / <leader>Gu /ggu  Undo ctrl+u
 --     <leader>agZ / v<leader>GZ / v<leader>ggZ    Redo                    <leader>ag? / <leader>G? / <leader>gg?  shortcuts
 --
@@ -350,7 +350,7 @@ vim.api.nvim_create_autocmd("User", {
     --   agy_command("/grill-me")
     -- end, "󰨞 Agy: /grill-me")
 
-    map_cmd("n", { "f", "F" }, function()
+    map_cmd("n", { "F" }, function()
       agy_command("/fork")
     end, "󰨞 Agy Session: /fork")
 
@@ -385,7 +385,7 @@ vim.api.nvim_create_autocmd("User", {
     -- end, "󰨞 Agy: /skills")
 
     -- Focus a la ventana de agy (reemplaza /open)
-    map_cmd("n", { "o", "g", "G" }, agy_focus, "󰨞 Agy: focus")
+    map_cmd("n", { "o", "g", "G", "f" }, agy_focus, "󰨞 Agy: focus")
 
     -- Atajos nativos del CLI agy (ver /keybindings) vía bytes crudos al terminal:
     map_cmd("n", "/", function()
@@ -424,9 +424,9 @@ vim.api.nvim_create_autocmd("User", {
         { "<leader>G", icon = { icon = "" } },
         { "<leader>gg", icon = { icon = "" } },
         { "<leader>ag", group = "Antigravity prompt", icon = { icon = "" } },
-        { mode = "n", "<leader>agF", hidden = true },
-        { mode = "n", "<leader>GF", hidden = true },
-        { mode = "n", "<leader>ggF", hidden = true },
+        { mode = "n", "<leader>agf", hidden = true },
+        { mode = "n", "<leader>Gf", hidden = true },
+        { mode = "n", "<leader>ggf", hidden = true },
         { mode = "n", "<leader>agg", hidden = true },
         { mode = "n", "<leader>Gg", hidden = true },
         { mode = "n", "<leader>ggg", hidden = true },
