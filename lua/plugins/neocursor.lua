@@ -18,14 +18,14 @@ return {
     -- 🔀 BACKEND REAL del cursortab (gestionado por los presets de modo):
     --   "cursor"       → app Cursor (StreamCpp, sesión firmada local)
     --   "antigravity"  → app Antigravity (tab_flash_lite_preview Supercomplete)
-    host = "cursor",
+    host = "antigravity",
     -- 🖥️ Qué HOST alimenta <leader>C (usage):
     --   "cursor"           → tabla del plan de Cursor (cursor_usage.py)
     --   "antigravity"      → RPC del CLI (antigravity_usage.py): quota por grupo +
     --                         reset; token en antigravity_token (0600, recapturable
     --                         con capture_anty_token.sh)
     --   "antigravity-tui"  → float-terminal `agy /usage` (TUI completa)
-    usage_host = "cursor", -- "antigravity" | "antigravity-tui" | "cursor"
+    usage_host = "antigravity", -- "antigravity" | "antigravity-tui" | "cursor"
     -- NO mapear <Tab> (lo gestionan Supermaven/blink en INSERT).
     -- Aceptar ghost text / saltos con el mismo set de atajos estilo NES.
     map_tab = false,
