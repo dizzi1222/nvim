@@ -157,6 +157,7 @@ require("config.keymaps") --  .
 require("config.keymaps.ollama-keys") -- keymaps para LocalAI [Ollama] 󰎣 🅾️ .
 require("config.keymaps.openrouter-keys") -- keymaps para OpenRouter 󱋭 .
 require("config.keymaps.gemini-keys") -- keymaps para Gemini AI 󰊭 .
+require("config.keymaps.codex-keys") -- keymaps para OpenAI Codex 󱚡 .
 -- require("config.fittencode-keys") -- Keymaps para Termux AI Autocomplete .
 require("config.keymaps.give-context") -- keymaps para utilidades IA  󰭹
 require("config.keymaps.close-buffers") -- keymaps para manipular buffers  .

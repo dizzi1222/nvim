@@ -106,6 +106,11 @@ return {
     "NakLast/antigravity-cli.nvim",
     enabled = true, -- Mapeado a Space + G, requiere antigravity desde nix
   },
+  {
+    -- 󱚡 OpenAI Codex CLI: configuración principal en lua/plugins/codex.lua
+    "johnseth97/codex.nvim",
+    enabled = true, -- Gestionado por Space + D mediante plugin-switcher
+  },
   --  MCPHUB  - Requiere APIKEY DE COPILOT permantente o 30 dias
   { "ravitemer/mcphub.nvim", enabled = true },
   {
