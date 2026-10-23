@@ -31,6 +31,13 @@ local PLUGINS_CONFIG = {
     file = "antigravity.lua",
     category = "AI Assistant",
   },
+  codex_cli = {
+    name = "OpenAI Codex CLI",
+    icon = "󱚡",
+    file = "codex.lua",
+    repo = "johnseth97/codex.nvim",
+    category = "AI Assistant",
+  },
   gemini_cli = {
     name = "Gemini CLI",
     icon = "󰊭",
