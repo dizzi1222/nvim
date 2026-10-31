@@ -422,7 +422,7 @@ vim.api.nvim_create_autocmd("User", {
     if ok then
       wk.add({
         { "<leader>G", icon = { icon = "" } },
-        { "<leader>gg", icon = { icon = "" } },
+        -- { "<leader>gg", icon = { icon = "" } },
         { "<leader>ag", group = "Antigravity prompt", icon = { icon = "" } },
         { mode = "n", "<leader>agf", hidden = true },
         { mode = "n", "<leader>Gf", hidden = true },

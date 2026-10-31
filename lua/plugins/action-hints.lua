@@ -27,6 +27,12 @@ return {
       vim.keymap.set("n", "<leader>gr", function() -- similar a <leader>sw (search word [RIPGREP])
         telescope.lsp_references()
       end, { desc = "⚡Go To Referencias (LSP)", silent = true })
+      -- Reutiliza gx, incluido el handler local de enlaces de Lazy.
+      vim.keymap.set("n", "<leader>gO", "gx", {
+        desc = "Abrir enlace bajo el cursor",
+        remap = true,
+        silent = true,
+      })
       -- 🧠 Inspect e InspectTree NO son del plugin: son NATIVOS de LazyVim/LSP
       -- (builtins de nvim). Aparecen siempre en el menú de acciones al hacer
       -- click/saltar sobre una definición — estos atajos solo los hacen cómodos.
