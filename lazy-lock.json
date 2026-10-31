@@ -78,7 +78,7 @@
   "obsidian.nvim": { "branch": "main", "commit": "ae1f76a75c7ce36866e1d9342a8f6f5b9c2caf9b" },
   "oil.nvim": { "branch": "master", "commit": "d3733d933833a0e59b813ecec99341527adf0c28" },
   "oklch-color-picker.nvim": { "branch": "master", "commit": "671aa293f4df65b300c194999efc9949d0baa721" },
-  "opencode-nick": { "branch": "main", "commit": "6c284818cfe0634ca17d39f7250d2f1426697b7e" },
+  "opencode-nick": { "branch": "main", "commit": "4851ae503585dc5142ad66a98e8952a74e1f7b3a" },
   "persistence.nvim": { "branch": "main", "commit": "b20b2a7887bd39c1a356980b45e03250f3dce49c" },
   "plenary.nvim": { "branch": "master", "commit": "74b06c6c75e4eeb3108ec01852001636d85a932b" },
   "precognition.nvim": { "branch": "main", "commit": "af99323ea0942aac39b65dca2bac7bb1174c010f" },

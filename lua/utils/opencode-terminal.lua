@@ -1,0 +1,160 @@
+local M = {}
+
+---Find this project's managed TUI, including buffers no longer registered by Snacks.
+---@return integer? buf
+function M.find()
+  local cwd = vim.fn.getcwd()
+  for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+    if vim.api.nvim_buf_is_valid(buf) and vim.b[buf].opencode_cwd == cwd then
+      local job = vim.bo[buf].channel
+      if job > 0 and vim.fn.jobwait({ job }, 0)[1] == -1 then
+        return buf
+      end
+    end
+  end
+end
+
+---Show the existing TUI or start OpenCode v2 using its shared service.
+---@param continue? boolean Resume the last session when opening a new TUI.
+---@return integer buf
+function M.focus(continue)
+  local buf = M.find()
+  if buf then
+    for _, win in ipairs(vim.fn.win_findbuf(buf)) do
+      if vim.api.nvim_win_is_valid(win) then
+        vim.api.nvim_set_current_win(win)
+        vim.cmd.startinsert()
+        return buf
+      end
+    end
+    for _, term in ipairs(require("snacks.terminal").list()) do
+      if term.buf == buf then
+        term:show():focus()
+        vim.cmd.startinsert()
+        return buf
+      end
+    end
+    vim.cmd("botright vsplit")
+    vim.api.nvim_win_set_buf(0, buf)
+    vim.api.nvim_win_set_width(0, math.max(30, math.floor(vim.o.columns * 0.35)))
+    vim.cmd.startinsert()
+    return buf
+  end
+
+  local cwd = vim.fn.getcwd()
+  for _, old in ipairs(vim.api.nvim_list_bufs()) do
+    if vim.api.nvim_buf_is_valid(old) and vim.b[old].opencode_cwd == cwd then
+      pcall(vim.api.nvim_buf_delete, old, { force = true })
+    end
+  end
+  local cmd = { "opencode" }
+  if continue then
+    cmd[#cmd + 1] = "--continue"
+  end
+  local term = require("snacks.terminal").open(cmd, {
+    cwd = cwd,
+    -- Keep exit output visible; M.focus removes dead buffers before restarting.
+    auto_close = false,
+    win = {
+      position = "right",
+      width = 0.35,
+      enter = true,
+      on_buf = function(win)
+        vim.b[win.buf].opencode_cwd = cwd
+      end,
+    },
+  })
+  return term.buf
+end
+
+---Hide a TUI visible in this tab; otherwise show and focus it in one press.
+function M.toggle()
+  local buf = M.find()
+  if buf then
+    for _, win in ipairs(vim.fn.win_findbuf(buf)) do
+      if vim.api.nvim_win_get_tabpage(win) == vim.api.nvim_get_current_tabpage() then
+        vim.api.nvim_win_hide(win)
+        return
+      end
+    end
+  end
+  M.focus()
+end
+
+---Close only this project's TUI; the shared OpenCode service remains available.
+function M.close()
+  local buf = M.find()
+  if buf then
+    vim.fn.jobstop(vim.bo[buf].channel)
+    vim.api.nvim_buf_delete(buf, { force = true })
+  end
+end
+
+---Send control keys to an existing TUI, never to a headless server terminal.
+---@param keys string
+---@return boolean sent
+function M.send(keys)
+  local buf = M.find()
+  if not buf then
+    M.focus()
+    vim.notify("OpenCode abierto. Repite el atajo cuando aparezca el prompt.", vim.log.levels.INFO)
+    return false
+  end
+  M.focus()
+  vim.api.nvim_chan_send(vim.bo[buf].channel, keys)
+  return true
+end
+
+---Keep the fork's absolute-path contexts as configuration overrides.
+---@return table<string, function>
+function M.contexts()
+  local builtins = require("opencode.context.builtins")
+  local contexts = {}
+  for placeholder, name in pairs({ ["@this"] = "this", ["@buffer"] = "buffer", ["@buffers"] = "buffers" }) do
+    local builder = builtins[name]
+    contexts[placeholder] = function(context)
+      local absolute = setmetatable({
+        format = function(opts)
+          opts = vim.tbl_extend("force", {}, opts)
+          opts.rel = nil
+          return context.format(opts)
+        end,
+      }, { __index = context })
+      return builder(absolute)
+    end
+  end
+  return contexts
+end
+
+---Expand editor placeholders before changing focus, then paste without submitting.
+---@param text string
+---@param range? opencode.context.Range
+function M.append(text, range)
+  local context = require("opencode.context").new({}, range)
+  local rendered = context:render(text).output:plaintext()
+  context:clear()
+  -- Strip escape characters so file/diagnostic text cannot terminate bracketed paste.
+  rendered = rendered:gsub("\27", "")
+  if not M.send("\27[200~" .. rendered .. "\27[201~") then
+    -- Keep the captured text available without depending on terminal startup timing.
+    vim.fn.setreg("o", rendered)
+    vim.notify("Contexto conservado en el registro o; pégalo cuando el TUI esté listo.")
+  end
+end
+
+---Capture an operator range and append it to the TUI without starting a model request.
+---@return string
+function M.operator()
+  _G.opencode_append_operator = function(kind)
+    local first = vim.api.nvim_buf_get_mark(0, "[")
+    local last = vim.api.nvim_buf_get_mark(0, "]")
+    if first[1] > last[1] or (first[1] == last[1] and first[2] > last[2]) then
+      first, last = last, first
+    end
+    M.append("@this ", { from = first, to = last, kind = kind })
+  end
+  vim.o.operatorfunc = "v:lua.opencode_append_operator"
+  return "g@"
+end
+
+return M

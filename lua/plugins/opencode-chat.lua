@@ -1,172 +1,8 @@
--- 🐐🗣️🔥️✍️ NO REQUIERE API: Opencode (NickvanDyke)
---  <leader>ao → Toggle  |  <C-a> → Ask @this  |  <C-x> → Select
---  <leader>ag → Menú de prompts  |  go/goo → operadores
---  @buffer, @this, @diagnostics nativos
---
--- TUI fallback para comandos que el server no expone (/fork, /share, Ctrl+X)
-local function tui_send(text, focus)
-  if focus == nil then
-    focus = true
-  end
-  local bufs = vim.api.nvim_list_bufs()
-  for i = 1, #bufs do
-    local buf = bufs[i]
-    if vim.bo[buf].buftype == "terminal" then
-      local name = vim.api.nvim_buf_get_name(buf)
-      if name:match("opencode") then
-        local chan = vim.bo[buf].channel
-        if chan and chan > 0 then
-          vim.api.nvim_chan_send(chan, text)
-          if focus then
-            local win = vim.fn.bufwinid(buf)
-            if win ~= -1 then
-              vim.api.nvim_set_current_win(win)
-              vim.cmd("startinsert")
-            end
-          end
-          return true
-        end
-      end
-    end
-  end
-  return false
-end
-
--- opencode se abre en una terminal snacks.terminal. Fijamos una sola cwd al
--- arrancar para que el id sea estable; así, al cambiar de proyecto/directorio
--- SIEMPRE se enfoca/oculta la misma sesión. El puerto se fija (4096) para que
--- coincida con `url` del server y el plugin conecte SIEMPRE a la misma
--- instancia (sin auto-discovery). La terminal se busca por su cmd real
--- (opencode) y NO con `snacks.terminal.get(..., {create=true})`: ese get crea
--- una terminal NUEVA aunque el server ya viva, spawneando otro `opencode
--- --port` que no puede bindear 4096 y queda zombie.
-local OC_CMD = "opencode --port 4096"
-local OC_ATTACH = "opencode attach http://localhost:4096"
-local OC_OPTS = {
-  cwd = vim.loop.cwd(), -- estable: no cambiar con el cwd actual de Neovim
-  win = {
-    position = "right",
-    enter = false,
-  },
-}
-
--- ¿Hay un server opencode escuchando en 4096?
-local function server_running()
-  local ok = vim.fn.system("curl -sf -m 2 -o /dev/null http://localhost:4096/")
-  return vim.v.shell_error == 0 and ok == ""
-end
-
--- Busca la terminal TUI opencode viva registrada en snacks.terminal.
-local function find_opencode_term()
-  local snacks = require("snacks.terminal")
-  for _, term in ipairs(snacks.list()) do
-    local cmd = term.cmd
-    if type(cmd) == "string" and cmd:match("opencode") then
-      return term
-    end
-  end
-  return nil
-end
-
--- Limpia buffers terminal opencode muertos (canal cerrado) que quedan de
--- procesos que ya no existen (zombies tipo term://166836:opencode).
-local function cleanup_dead_opencode()
-  for _, buf in ipairs(vim.api.nvim_list_bufs()) do
-    if vim.bo[buf].buftype == "terminal" and vim.api.nvim_buf_get_name(buf):match("opencode") then
-      local chan = vim.bo[buf].channel
-      if not chan or chan <= 0 then
-        pcall(vim.api.nvim_buf_delete, buf, { force = true })
-      end
-    end
-  end
-end
-
--- Abre la terminal correcta según el estado del server:
---   - server vivo:  `opencode attach` (conecta al 4096, NO spawna otro bind)
---   - server muerto: `opencode --port 4096` (arranca server + TUI)
-local function open_opencode()
-  local snacks = require("snacks.terminal")
-  if server_running() then
-    snacks.open(OC_ATTACH, OC_OPTS)
-  else
-    snacks.open(OC_CMD, OC_OPTS)
-  end
-end
-
--- Busca el buffer terminal del opencode TUI con job vivo. NO depende de
--- snacks.terminal: si snacks perdió el registro del terminal, igual lo encontramos.
---
--- ⚠ Orden importa: esta función debe estar DEFINIDA antes de `toggle_opencode` y
--- `focus_opencode`, que la llaman. En Lua una local usada antes de existir es nil.
-local function find_opencode_buf()
-  for _, buf in ipairs(vim.api.nvim_list_bufs()) do
-    if vim.bo[buf].buftype == "terminal" and vim.api.nvim_buf_get_name(buf):match("opencode") then
-      local chan = vim.bo[buf].channel
-      if chan and chan > 0 then
-        return buf
-      end
-    end
-  end
-  return nil
-end
-
--- Focus: muestra y enfoca la terminal ya creada (o la crea si no hay ninguna).
--- Idempotente: da igual si la ventana está visible, oculta o en otra tab —
--- siempre termina mostrando + enfocando en UNA sola pulsación.
-local function focus_opencode()
-  cleanup_dead_opencode()
-
-  local buf = find_opencode_buf()
-  if not buf then
-    open_opencode()
-    return
-  end
-
-  -- 1) Si snacks todavía conoce la terminal, que la muestre él: restaura el layout
-  --    con el que fue creada (si no, el TUI queda squeezed y se ve con líneas).
-  local term = find_opencode_term()
-  if term then
-    term:show():focus()
-    return
-  end
-
-  -- 2) Fallback sin snacks. Split HORIZONTAL a propósito: un `vsplit` deja el TUI
-  --    en media pantalla de ancho y el output se parte en líneas ilegibles.
-  local win = vim.fn.bufwinid(buf)
-  if win == -1 or not vim.api.nvim_win_is_valid(win) then
-    vim.cmd("botright split")
-    win = vim.api.nvim_get_current_win()
-    vim.api.nvim_win_set_buf(win, buf)
-    pcall(vim.api.nvim_win_set_height, win, math.max(20, math.floor(vim.o.lines * 0.6)))
-  end
-  vim.api.nvim_set_current_win(win)
-  vim.cmd("startinsert")
-end
-
--- Toggle inteligente: "si estoy viendo opencode → oculto; si no → lo muestro y
--- enfoco". Con el `term:toggle()` de snacks hay que pulsar 2 veces cuando la
--- ventana quedó en otra tab: la 1ª oculta/no hace nada visible, la 2ª muestra.
--- Este toggle decide por visibilidad REAL, así que siempre es 1 pulsación.
-local function toggle_opencode()
-  cleanup_dead_opencode()
-
-  local buf = find_opencode_buf()
-  if not buf then
-    open_opencode()
-    return
-  end
-
-  local win = vim.fn.bufwinid(buf)
-  local visible_here = win ~= -1
-    and vim.api.nvim_win_is_valid(win)
-    and vim.api.nvim_win_get_tabpage(win) == vim.api.nvim_get_current_tabpage()
-
-  if visible_here then
-    pcall(vim.api.nvim_win_hide, win)
-  else
-    focus_opencode()
-  end
-end
+-- OpenCode v2: servicio compartido, API nativa y TUI integrado en Neovim.
+local terminal = require("utils.opencode-terminal")
+local tui_send = terminal.send
+local focus_opencode = terminal.focus
+local toggle_opencode = terminal.toggle
 
 -- ── Engram: memoria persistente ────────────────────────────────────────────
 -- Autodetección de proyecto por cwd; el resumen de sesión SIEMPRE a dotfiles-dizzi.
@@ -222,132 +58,92 @@ local function eng_search()
   vim.notify(vim.fn.system('engram search "' .. query .. '"'))
 end
 
--- ── Transcript en float (<leader>so / <leader>sO) ──────────────────────────
--- Vuelca el transcript markdown de una sesión opencode leyendo literal la DB
--- (~/.local/share/opencode/*.db) con el helper opencode_transcript.py, que
--- replica el formato EXACTO del /copy del TUI (headers `## User` /
--- `## Assistant (Agent · Model · tiempo)`, `_Thinking:_` y tools).
---   <leader>so → sesión más activa (time_updated)
---   <leader>sO → selector de sesiones (vía --list) y abre la elegida
--- No depende del clipboard ni del foco de la TUI (el flujo /copy era frágil).
+-- ── Transcript v2: exportación oficial, sin consultar las tablas legacy ──
 local OC_TRANSCRIPT_PY = vim.fn.stdpath("config") .. "/opencode_transcript.py"
 
-local function oc_open_transcript_float(session_id)
-  local tmp = "/tmp/copy.md"
-  local buf = vim.fn.bufadd(tmp)
-  vim.bo[buf].filetype = "markdown"
-  local cols, rows = vim.o.columns, vim.o.lines
-  local width = math.min(120, cols - 6)
-  local height = math.min(40, rows - 6)
-  local title = session_id and ("󱙔 opencode transcript — " .. session_id:sub(1, 8))
-    or "󱙔 opencode transcript — /tmp/copy.md"
-  local win = vim.api.nvim_open_win(buf, true, {
-    relative = "editor",
-    style = "minimal",
-    border = "rounded",
-    width = width,
-    height = height,
-    row = math.max(0, math.floor((rows - height) / 2) - 1),
-    col = math.max(0, math.floor((cols - width) / 2)),
-    title = title,
-    title_pos = "center",
-  })
-  vim.wo[win].number = true
-  if vim.fn.filereadable(tmp) == 1 then
-    vim.cmd("edit " .. tmp)
-  end
-  vim.schedule(function()
-    vim.cmd("normal! gg")
-  end)
-  -- q / Esc cierran el float; la búsqueda nativa (/ ? n N) funciona de serie.
-  vim.keymap.set("n", "q", "<cmd>close<CR>", { buffer = buf, desc = "Cerrar transcript" })
-  vim.keymap.set("n", "<Esc>", "<cmd>close<CR>", { buffer = buf, desc = "Cerrar transcript" })
-end
-
-local function oc_transcript_float(session_id)
-  if vim.fn.filereadable(OC_TRANSCRIPT_PY) ~= 1 then
-    vim.notify("󱙔 Falta " .. OC_TRANSCRIPT_PY, vim.log.levels.WARN)
-    return
-  end
-
+---Export a v2 session and display a searchable Markdown buffer, or copy it.
+---@param session_id? string
+---@param copy? boolean
+local function oc_transcript_float(session_id, copy)
   local args = { "python3", OC_TRANSCRIPT_PY }
   if session_id then
     vim.list_extend(args, { "--session", session_id })
+  else
+    vim.list_extend(args, { "--directory", vim.fn.getcwd() })
   end
-  local out = {}
-  vim.fn.jobstart(args, {
-    stdout_buffered = true,
-    on_stdout = function(_, d)
-      if d then
-        vim.list_extend(out, d)
+  vim.system(
+    args,
+    { text = true },
+    vim.schedule_wrap(function(result)
+      if result.code ~= 0 then
+        vim.notify(vim.trim(result.stderr or "No se pudo exportar la sesión"), vim.log.levels.WARN)
+        return
       end
-    end,
-    on_exit = function(_, code)
-      vim.schedule(function()
-        if code ~= 0 then
-          vim.notify("󱙔 opencode_transcript.py falló (código " .. code .. ")", vim.log.levels.WARN)
-          return
-        end
-        if #out == 0 or vim.fn.filereadable("/tmp/copy.md") ~= 1 then
-          vim.notify("󱙔 Sin transcript: no hay sesión opencode", vim.log.levels.WARN)
-          return
-        end
-        oc_open_transcript_float(session_id)
-      end)
-    end,
-  })
+      if copy then
+        vim.fn.setreg("+", result.stdout)
+        vim.notify("Transcript de OpenCode copiado al portapapeles")
+        return
+      end
+      local buf = vim.api.nvim_create_buf(false, true)
+      vim.api.nvim_buf_set_lines(buf, 0, -1, false, vim.split(result.stdout, "\n", { plain = true }))
+      vim.bo[buf].filetype = "markdown"
+      vim.bo[buf].bufhidden = "wipe"
+      vim.bo[buf].modifiable = false
+      local width = math.max(1, math.min(120, vim.o.columns - 6))
+      local height = math.max(1, math.min(40, vim.o.lines - 6))
+      local win = vim.api.nvim_open_win(buf, true, {
+        relative = "editor",
+        style = "minimal",
+        border = "rounded",
+        width = width,
+        height = height,
+        row = math.max(0, math.floor((vim.o.lines - height) / 2) - 1),
+        col = math.max(0, math.floor((vim.o.columns - width) / 2)),
+        title = "󱙔 OpenCode transcript",
+        title_pos = "center",
+      })
+      vim.wo[win].number = true
+      vim.keymap.set("n", "q", "<cmd>close<CR>", { buffer = buf, desc = "Cerrar transcript" })
+      vim.keymap.set("n", "<Esc>", "<cmd>close<CR>", { buffer = buf, desc = "Cerrar transcript" })
+    end)
+  )
 end
 
--- Selector de sesiones (rápido y simple): lista las sesiones con su último
--- título y fecha, y abre el transcript de la elegida en el float.
+---Choose a v2 session using IDs, even when multiple sessions have the same title.
 local function oc_select_transcript()
-  if vim.fn.filereadable(OC_TRANSCRIPT_PY) ~= 1 then
-    vim.notify("󱙔 Falta " .. OC_TRANSCRIPT_PY, vim.log.levels.WARN)
-    return
-  end
-
-  local items = {}
-  vim.fn.jobstart({ "python3", OC_TRANSCRIPT_PY, "--list" }, {
-    stdout_buffered = true,
-    on_stdout = function(_, d)
-      if d then
-        vim.list_extend(items, d)
+  vim.system(
+    { "python3", OC_TRANSCRIPT_PY, "--list" },
+    { text = true },
+    vim.schedule_wrap(function(result)
+      if result.code ~= 0 then
+        vim.notify(vim.trim(result.stderr or "No se pudieron listar las sesiones"), vim.log.levels.WARN)
+        return
       end
-    end,
-    on_exit = function(_, code)
-      vim.schedule(function()
-        if code ~= 0 or #items == 0 then
-          vim.notify("󱙔 Sin sesiones opencode en la DB", vim.log.levels.WARN)
-          return
+      local ok, sessions = pcall(vim.json.decode, result.stdout)
+      if not ok or type(sessions) ~= "table" or #sessions == 0 then
+        vim.notify("Sin sesiones de OpenCode v2", vim.log.levels.INFO)
+        return
+      end
+      vim.ui.select(sessions, {
+        prompt = "󱙔 Selecciona una sesión OpenCode:",
+        format_item = function(session)
+          local created = math.floor((session.time.created or 0) / 1000)
+          return ("%s · %s"):format(session.title or session.id, vim.fn.strftime("%Y-%m-%d %H:%M", created))
+        end,
+      }, function(session)
+        if session then
+          oc_transcript_float(session.id)
         end
-        local choices = {}
-        local map = {}
-        for _, line in ipairs(items) do
-          local id, title, created, _, texts = line:match("([^|]+)|([^|]*)|([^|]*)|[^|]*|([^|]*)")
-          local label = title ~= "" and title or "(sin título)"
-          if #label > 60 then
-            label = label:sub(1, 57) .. "…"
-          end
-          local choice = ("󱙔 %s  ·  %s  ·  %s msgs"):format(label, created, texts or "0")
-          choices[#choices + 1] = choice
-          map[choice] = id
-        end
-        vim.ui.select(choices, {
-          prompt = "󱙔 Seleccioná sesión opencode:",
-        }, function(choice)
-          if choice and map[choice] then
-            oc_transcript_float(map[choice])
-          end
-        end)
       end)
-    end,
-  })
+    end)
+  )
 end
 
 return {
-  -- 1. Apuntar a tu fork con los parches nativos
-  "dizzi1222/opencode.nvim",
-  -- commit = "0d0aede7", -- Opcional: Lazy.nvim descargará siempre lo último de main.
+  "nickjvandyke/opencode.nvim",
+  branch = "main",
+  version = false, -- Las releases 1.x usan la API antigua.
+  commit = "4851ae503585dc5142ad66a98e8952a74e1f7b3a",
   name = "opencode-nick",
   dependencies = {
     { "folke/snacks.nvim", opts = { input = {}, picker = {}, terminal = {} } },
@@ -365,27 +161,7 @@ return {
     {
       "<leader>aK",
       function()
-        local as_group = vim.api.nvim_create_augroup("opencode_as_focus", { clear = true })
-        vim.api.nvim_create_autocmd("User", {
-          pattern = "OpencodeEvent:*",
-          group = as_group,
-          once = true,
-          callback = function()
-            vim.defer_fn(function()
-              for _, buf in ipairs(vim.api.nvim_list_bufs()) do
-                if vim.bo[buf].buftype == "terminal" and vim.api.nvim_buf_get_name(buf):match("opencode") then
-                  local win = vim.fn.bufwinid(buf)
-                  if win ~= -1 then
-                    vim.api.nvim_set_current_win(win)
-                    vim.cmd("startinsert")
-                  end
-                  break
-                end
-              end
-            end, 100)
-          end,
-        })
-        require("opencode").ask("@this: ", { submit = false })
+        require("opencode").ask("@this: ")
       end,
       mode = { "n", "x" },
       desc = "󰮮 OpenCode - Send / Ask a Opencode [Input]",
@@ -393,19 +169,7 @@ return {
     {
       "<leader>as",
       function()
-        require("opencode").prompt("@this: ")
-        vim.defer_fn(function()
-          for _, buf in ipairs(vim.api.nvim_list_bufs()) do
-            if vim.bo[buf].buftype == "terminal" and vim.api.nvim_buf_get_name(buf):match("opencode") then
-              local win = vim.fn.bufwinid(buf)
-              if win ~= -1 then
-                vim.api.nvim_set_current_win(win)
-                vim.cmd("startinsert")
-              end
-              break
-            end
-          end
-        end, 200)
+        terminal.append("@this: ")
       end,
       mode = { "n", "x" },
       desc = " 󰮮 OpenCode - Send / Enviar a Opencode TUI",
@@ -415,7 +179,7 @@ return {
     {
       "<leader>ab",
       function()
-        require("opencode").ask("@buffer: ", { submit = false })
+        terminal.append("@buffer: ")
       end,
       mode = { "n" },
       desc = " 󰮮 Agregar @buffer a contexto (sin enviar)",
@@ -423,7 +187,7 @@ return {
     {
       "<leader>aB",
       function()
-        require("opencode").ask("@buffers: ", { submit = false })
+        terminal.append("@buffers: ")
       end,
       mode = { "n" },
       desc = " 󰮮 Agregar @buffers (todos) a contexto",
@@ -433,7 +197,7 @@ return {
     {
       "<leader>ap",
       function()
-        require("opencode").prompt("@this", { submit = true })
+        require("opencode").prompt("@this")
       end,
       mode = { "n", "x" },
       desc = " 󰮮 OpenCode prompt",
@@ -441,7 +205,7 @@ return {
     {
       "<leader>ape",
       function()
-        require("opencode").prompt("explain", { submit = true })
+        require("opencode").prompt("Explain @this and its context")
       end,
       mode = { "n", "x" },
       desc = " 󰮮 OpenCode explain",
@@ -449,7 +213,7 @@ return {
     {
       "<leader>apf",
       function()
-        require("opencode").prompt("fix", { submit = true })
+        require("opencode").prompt("Fix @diagnostics")
       end,
       mode = { "n", "x" },
       desc = " 󰮮 OpenCode fix",
@@ -457,7 +221,7 @@ return {
     {
       "<leader>apd",
       function()
-        require("opencode").prompt("diagnose", { submit = true })
+        require("opencode").prompt("Explain @diagnostics and suggest a solution")
       end,
       mode = { "n", "x" },
       desc = " 󰮮 OpenCode diagnose",
@@ -465,7 +229,7 @@ return {
     {
       "<leader>apr",
       function()
-        require("opencode").prompt("review", { submit = true })
+        require("opencode").prompt("Review @this for correctness and readability")
       end,
       mode = { "n", "x" },
       desc = " 󰮮 OpenCode review",
@@ -473,7 +237,7 @@ return {
     {
       "<leader>apt",
       function()
-        require("opencode").prompt("test", { submit = true })
+        require("opencode").prompt("Add tests for @this")
       end,
       mode = { "n", "x" },
       desc = " 󰮮 OpenCode test",
@@ -481,7 +245,7 @@ return {
     {
       "<leader>apo",
       function()
-        require("opencode").prompt("optimize", { submit = true })
+        require("opencode").prompt("Optimize @this for performance and readability")
       end,
       mode = { "n", "x" },
       desc = " 󰮮 OpenCode optimize",
@@ -491,7 +255,7 @@ return {
     {
       "<leader>aN",
       function()
-        require("opencode").command("session.new")
+        tui_send("\x18n")
       end,
       desc = " 󰮮 New Session",
     },
@@ -505,46 +269,46 @@ return {
     {
       "<leader>au",
       function()
-        require("opencode").command("session.undo")
+        tui_send("\x18u")
       end,
       desc = " 󰮮 Undo último mensaje",
     },
     {
       "<leader>ar",
       function()
-        require("opencode").command("session.redo")
+        tui_send("\x18r")
       end,
       desc = " 󰮮 Redo acción",
     },
     {
       "<leader>ax",
       function()
-        require("opencode").command("session.interrupt")
+        tui_send("\27")
       end,
       desc = " 󰮮 Interrupt / Detener opencode",
     },
     {
       "<leader>ak",
       function()
-        require("opencode").command("session.compact")
+        tui_send("\x18c")
       end,
       desc = " 󰮮 Compact / Reducir contexto",
     },
     {
       "<leader>aC",
       function()
-        tui_send("/share\n")
+        oc_transcript_float(nil, true)
       end,
       mode = { "n", "x" },
-      desc = " 󰮮 Share session (link)",
+      desc = " 󰮮 Copiar transcript (OpenCode v2)",
     },
     {
       "<leader>aF",
       function()
-        tui_send("/fork\n")
+        tui_send("\16fork")
       end,
       mode = { "n", "x" },
-      desc = " 󰮮 Fork session (desde este punto)",
+      desc = " 󰮮 Fork session (selector de acciones)",
     },
 
     -- ── Focus TUI terminal ───────────────────────────────────
@@ -565,10 +329,10 @@ return {
     {
       "<leader>ac",
       function()
-        require("snacks.terminal").open("opencode --continue --port 4096", OC_OPTS)
+        terminal.focus(true)
       end,
       mode = { "n" },
-      desc = "󰮮 Continue (abre opencode --continue en 4096)",
+      desc = "󰮮 Continue OpenCode (v2)",
     },
     {
       "<leader>so",
@@ -655,39 +419,11 @@ return {
     ---@type opencode.Opts
     vim.g.opencode_opts = {
       server = {
-        -- Conecta DIRECTO al server opencode --port existente (4096).
-        -- Sin `url`, el plugin usa auto-discovery (pgrep+lsof+CWD overlap) que
-        -- en termux falla (lsof ausente / CWD distinto) y en desktop crea OTRAS
-        -- instancias al cambiar de CWD -> "No OpenCode servers found with
-        -- overlapping CWD" y sessões nuevas. Con `url`+`connect` SIEMPRE usa la
-        -- misma instancia que abre OC_CMD (puerto 4096 fijo).
-        url = "http://localhost:4096",
+        -- v2 descubre URL y contraseña en el registro del servicio compartido.
         connect = true,
-        start = function()
-          focus_opencode()
-        end,
+        start = focus_opencode,
       },
-      providers = {
-        anthropic = {
-          api_key_cmd = "echo $ANTHROPIC_API_KEY",
-          model = "claude-sonnet-4-20250514",
-        },
-        gemini = {
-          auth_type = "oauth",
-          model = "gemini-2.5-pro",
-          models = {
-            ["gemini-2.5-pro"] = {
-              options = {
-                thinkingConfig = {
-                  thinkingBudget = 8192,
-                  includeThoughts = true,
-                },
-              },
-            },
-          },
-        },
-      },
-      default_provider = "anthropic",
+      contexts = terminal.contexts(),
     }
 
     vim.o.autoread = true
@@ -700,6 +436,7 @@ return {
       vim.keymap.set("i", "<C-BS>", "<C-W>", { buffer = true, desc = "Delete prev word" })
     end
     vim.api.nvim_create_autocmd("InsertEnter", {
+      group = vim.api.nvim_create_augroup("OpencodeCleanInput", { clear = true }),
       callback = function(args)
         local ft = vim.bo[args.buf].filetype
         if ft == "opencode_ask" or ft == "AvanteAsk" or ft == "AvanteInput" then
@@ -710,7 +447,7 @@ return {
 
     -- ── Keymaps globales ──────────────────────────────────────
     vim.keymap.set({ "n", "x" }, "<C-a>", function()
-      require("opencode").ask("@this: ", { submit = true })
+      require("opencode").ask("@this: ")
     end, { desc = " 󰮮 Ask opencode…" })
     vim.keymap.set({ "n", "x" }, "<C-x>", function()
       require("opencode").select()
@@ -718,17 +455,17 @@ return {
     vim.keymap.set({ "n", "t" }, "<C-.>", toggle_opencode, { desc = " 󰮮 Toggle opencode" })
 
     vim.keymap.set({ "n", "x" }, "go", function()
-      return require("opencode").operator("@this ")
+      return terminal.operator()
     end, { desc = " 󰮮 Add range to opencode", expr = true })
     vim.keymap.set("n", "goo", function()
-      return require("opencode").operator("@this ") .. "_"
+      return terminal.operator() .. "_"
     end, { desc = " 󰮮 Add line to opencode", expr = true })
 
     vim.keymap.set("n", "<S-C-u>", function()
-      require("opencode").command("session.half.page.up")
+      tui_send("\27\21")
     end, { desc = " 󰮮 Scroll opencode up" })
     vim.keymap.set("n", "<S-C-d>", function()
-      require("opencode").command("session.half.page.down")
+      tui_send("\27\4")
     end, { desc = " 󰮮 Scroll opencode down" })
 
     -- which-key: solo mostrar iconos cuando opencode está activo
