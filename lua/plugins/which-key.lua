@@ -14,6 +14,7 @@ return {
       { "<leader>d", group = " Debug" },
       { "<leader>f", group = " File/Find" },
       { "<leader>g", group = "󰊢 Git" },
+      { "<leader>gg", group = "󰊢 Git" },
       { "<leader>l", group = "󰒲 Lazy" },
       { "<leader>n", group = " Notifications" },
       { "<leader>ay", group = "  Copiar selección con contexto (sin abrir)", icon = { icon = "󰆏" } },

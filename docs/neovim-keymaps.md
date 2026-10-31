@@ -181,6 +181,7 @@ Para activar/desactivar IAs, modifica estos archivos:
 | Hover docs       | `K`               |
 | Code actions     | `<leader>ca`      |
 | Open Lazygit     | `<leader>gg`      |
+| Open DB TUI      | `<leader>gz`      |
 
 ---
 
@@ -379,6 +380,22 @@ Git operations from within Neovim.
 | `<leader>ghr` | Reset Hunk    | n    |
 | `<leader>ghS` | Stage Buffer  | n    |
 | `<leader>ghR` | Reset Buffer  | n    |
+
+---
+
+## Database Integration
+
+| Keys         | Description                                         | Mode |
+| ------------ | --------------------------------------------------- | ---- |
+| `<leader>gz` | DB TUI: choose database, environment, and access mode | n    |
+
+`dbtui.nvim` detects PTD Talento from its Git remote and offers MAIN/DEV, QA, and PROD. In other projects, it discovers
+PostgreSQL and MongoDB connections from `.env`, `.env.qa`, and `.env.production`; it can also detect a local MongoDB
+service from Docker Compose. PostgreSQL opens in LazySQL, uses the configured `DB_PORT` or `PGPORT`, and asks for
+read-only or edit mode. Edit mode opens the selected environment directly, including production.
+
+MongoDB opens in `mongosh`. MongoDB permissions come from the database user's roles, so the launcher does not present a
+misleading client-side read-only option. Use a dedicated read-only MongoDB account when writes must be impossible.
 
 ---
 

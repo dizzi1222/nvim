@@ -483,7 +483,57 @@ end, { desc = "Engram: Search memory" })
 --   <leader>qd = Don't save current
 -- Falta el de GUARDAR manualmente -> <leader>qg (guardar)
 -- =============================
+
+-- Limpiar arglist de buffers eliminados antes de guardar sesión
+vim.api.nvim_create_autocmd("User", {
+  group = vim.api.nvim_create_augroup("persistence_arglist", { clear = true }),
+  pattern = "PersistenceSavePre",
+  callback = function()
+    local seen = {}
+    for _, win in ipairs(vim.api.nvim_list_wins()) do
+      vim.api.nvim_win_call(win, function()
+        local id = vim.fn.arglistid()
+        if seen[id] then
+          return
+        end
+        seen[id] = true
+        local args = vim.fn.argv()
+        for i = #args, 1, -1 do
+          if vim.fn.buflisted(vim.fn.fnamemodify(args[i], ":p")) == 0 then
+            vim.cmd(i .. "argdelete")
+          end
+        end
+      end)
+    end
+    -- También limpiar el arglist global (id 0) por si no está asociado a ninguna ventana
+    if not seen[0] then
+      local args = vim.fn.argv(-1, -1)
+      for i = #args, 1, -1 do
+        if vim.fn.buflisted(vim.fn.fnamemodify(args[i], ":p")) == 0 then
+          vim.cmd(i .. "argdelete")
+        end
+      end
+    end
+  end,
+})
+
 vim.keymap.set("n", "<leader>qg", function()
-  require("persistence").save()
-  vim.notify("Sesión guardada", vim.log.levels.INFO)
+  local ok, session = pcall(function()
+    local persistence = require("persistence")
+    local file = persistence.current()
+    vim.fn.mkdir(vim.fn.fnamemodify(file, ":h"), "p")
+    persistence.fire("SavePre")
+    persistence.save()
+    assert(vim.fn.filereadable(file) == 1, "No se creó el archivo de sesión: " .. file)
+    persistence.fire("SavePost")
+    if not persistence.active() then
+      persistence.start()
+    end
+    return file
+  end)
+  if not ok then
+    vim.notify("No se pudo guardar la sesión: " .. tostring(session), vim.log.levels.ERROR)
+    return
+  end
+  vim.notify("Sesión guardada en " .. session, vim.log.levels.INFO)
 end, { desc = "Guardar sesión (persistence)" })
