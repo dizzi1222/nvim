@@ -1,0 +1,11 @@
+--- a/lua/opencode/context/init.lua
++++ b/lua/opencode/context/init.lua
+@@ -125,7 +125,7 @@ function Context:render(prompt)
+   local context_placeholders = vim.tbl_keys(contexts)
+   local agent_placeholders = vim.tbl_map(function(agent)
+     return "@" .. agent.name
+-  end, self.server.subagents)
++  end, self.server.subagents or {})
+ 
+   ---@type table<string, { input: (fun(): opencode.context.rendered.Text), output: (fun(): opencode.context.rendered.Text) }>
+   local placeholders = {}

@@ -22,6 +22,7 @@ personality.
   - [Configuration Location](#configuration-location)
   - [Gentleman Theme](#gentleman-theme-visual-colors)
 - [OpenCode Configuration](#opencode-configuration)
+  - [TUI de OpenCode (v2)](#tui-de-opencode-v2)
   - [Using the Gentleman Agent](#using-the-gentleman-agent)
   - [Configuring the Default Model](#configuring-the-default-model)
   - [Available Models](#available-models)
@@ -228,6 +229,15 @@ OpenCode is installed automatically with a custom **Gentleman** agent and theme.
 > `opencode-anthropic-auth` plugin, already configured in
 > `GentlemanOpenCode/opencode.json`. Just run `opencode` and authenticate with your
 > Claude account.
+
+### TUI de OpenCode (v2)
+
+El TUI lo controla `lua/utils/opencode-terminal.lua`, no el plugin.
+`M.find()` prioriza cwd exacto → ancestro (`$HOME`) → cualquier TUI vivo.
+Si reaparece una segunda ventana por proyecto, el culpable es `M.find()`.
+
+`ask()`/`select()` de upstream resuelven la sesión por cwd; si el proyecto no
+tiene sesión propia, fallan. Abre o continúa una sesión en el TUI del proyecto.
 
 ### Using the Gentleman Agent
 
