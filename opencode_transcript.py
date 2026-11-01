@@ -10,6 +10,7 @@ import argparse
 import json
 import subprocess
 import sys
+import tempfile
 from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlencode
@@ -18,9 +19,27 @@ from urllib.parse import urlencode
 def cli_json(*args):
     """Let OpenCode resolve its own service URL and credentials."""
     result = subprocess.run(
-        ["opencode", *args], capture_output=True, text=True, timeout=30, check=True
+        ["opencode", *args], capture_output=True, text=True, timeout=60, check=True
     )
-    return json.loads(result.stdout)
+    # OpenCode CLI prints TUI banner art to stdout before the actual JSON.
+    # Extract the JSON portion (starts with { or [) from the end of stdout.
+    stdout = result.stdout
+    for i, ch in enumerate(stdout):
+        if ch in "{[":
+            try:
+                return json.loads(stdout[i:])
+            except json.JSONDecodeError:
+                continue
+    return json.loads(stdout)
+
+
+def cli_json_to_file(*args, outfile):
+    """Run opencode command writing JSON output to a file to avoid stdout buffer issues."""
+    cmd = ["opencode", *args]
+    with open(outfile, "w") as f:
+        result = subprocess.run(cmd, stdout=f, stderr=subprocess.PIPE, text=True, timeout=120, check=True)
+    with open(outfile) as f:
+        return json.load(f)
 
 
 def list_sessions(directory=None):
@@ -106,13 +125,20 @@ def main():
                 print("No hay sesiones OpenCode v2 para este directorio.", file=sys.stderr)
                 return 1
             session_id = sessions[0]["id"]
-        text = format_transcript(cli_json("session", "export", session_id))
+        # Export session to temp file to avoid stdout buffer truncation on large sessions
+        with tempfile.NamedTemporaryFile(mode="w+", suffix=".json", delete=False) as tmp:
+            tmp_path = tmp.name
+        try:
+            exported = cli_json_to_file("session", "export", session_id, outfile=tmp_path)
+        finally:
+            Path(tmp_path).unlink(missing_ok=True)
+        text = format_transcript(exported)
         if args.out:
             Path(args.out).write_text(text, encoding="utf-8")
         sys.stdout.write(text)
         return 0
-    except (OSError, ValueError, KeyError, subprocess.SubprocessError) as exc:
-        print(f"No se pudo exportar la sesión OpenCode v2: {type(exc).__name__}", file=sys.stderr)
+    except (OSError, ValueError, KeyError, subprocess.SubprocessError, json.JSONDecodeError) as exc:
+        print(f"No se pudo exportar la sesión OpenCode v2: {type(exc).__name__}: {exc}", file=sys.stderr)
         return 1
 
 

@@ -1,17 +1,29 @@
 local M = {}
 
----Find this project's managed TUI, including buffers no longer registered by Snacks.
+---Find a live OpenCode TUI, preferring this project, then an ancestor
+---(e.g. $HOME), then any other live TUI.
 ---@return integer? buf
 function M.find()
   local cwd = vim.fn.getcwd()
+  local exact, ancestor, any
+  local ancestor_len = -1
   for _, buf in ipairs(vim.api.nvim_list_bufs()) do
-    if vim.api.nvim_buf_is_valid(buf) and vim.b[buf].opencode_cwd == cwd then
-      local job = vim.bo[buf].channel
-      if job > 0 and vim.fn.jobwait({ job }, 0)[1] == -1 then
-        return buf
+    if vim.api.nvim_buf_is_valid(buf) then
+      local opencode_cwd = vim.b[buf].opencode_cwd
+      if opencode_cwd then
+        local job = vim.bo[buf].channel
+        if job > 0 and vim.fn.jobwait({ job }, 0)[1] == -1 then
+          if opencode_cwd == cwd then
+            exact = exact or buf
+          elseif cwd:sub(1, #opencode_cwd + 1) == opencode_cwd .. "/" and #opencode_cwd > ancestor_len then
+            ancestor, ancestor_len = buf, #opencode_cwd
+          end
+          any = any or buf
+        end
       end
     end
   end
+  return exact or ancestor or any
 end
 
 ---Show the existing TUI or start OpenCode v2 using its shared service.
@@ -47,7 +59,60 @@ function M.focus(continue)
       pcall(vim.api.nvim_buf_delete, old, { force = true })
     end
   end
-  local cmd = { "opencode" }
+  -- Resolve opencode binary robustly (cross-platform, works even if PATH isn't propagated to GUI apps)
+  local opencode_bin = vim.fn.exepath("opencode")
+  if opencode_bin == "" then
+    local sysname = vim.loop.os_uname().sysname
+    local home = vim.loop.os_homedir()
+    local candidates = {}
+
+    if sysname == "Linux" then
+      -- Linux: Fedora/Bazzite, Arch/CachyOS, NixOS, Debian/Ubuntu, Termux, etc.
+      candidates = {
+        home .. "/.opencode/bin/opencode",           -- Official installer (most distros)
+        home .. "/.local/bin/opencode",              -- pipx, cargo, local installs
+        "/usr/local/bin/opencode",                   -- Manual / make install
+        "/usr/bin/opencode",                         -- Distro package
+        -- NixOS: if installed via nix, it's usually in PATH already.
+        -- If not, user profile might be at ~/.nix-profile/bin/opencode
+        home .. "/.nix-profile/bin/opencode",
+        -- Termux
+        (os.getenv("PREFIX") or "") .. "/bin/opencode",
+      }
+    elseif sysname == "Darwin" then
+      -- macOS: Intel + Apple Silicon
+      candidates = {
+        home .. "/.opencode/bin/opencode",           -- Official installer
+        home .. "/.local/bin/opencode",              -- pipx, cargo, local installs
+        "/usr/local/bin/opencode",                   -- Intel Homebrew / manual
+        "/opt/homebrew/bin/opencode",                -- Apple Silicon Homebrew
+        "/usr/bin/opencode",                         -- System (rare)
+      }
+    elseif sysname == "Windows_NT" then
+      -- Windows: native, scoop, chocolatey, winget, official installer
+      local localappdata = os.getenv("LOCALAPPDATA") or ""
+      local appdata = os.getenv("APPDATA") or ""
+      local userprofile = os.getenv("USERPROFILE") or home
+      candidates = {
+        userprofile .. "\\.opencode\\bin\\opencode.exe",         -- Official installer
+        localappdata .. "\\opencode\\bin\\opencode.exe",         -- Alternative installer location
+        userprofile .. "\\scoop\\apps\\opencode\\current\\opencode.exe", -- Scoop
+        userprofile .. "\\.scoop\\apps\\opencode\\current\\opencode.exe", -- Scoop (alt)
+        "C:\\ProgramData\\chocolatey\\bin\\opencode.exe",        -- Chocolatey
+        localappdata .. "\\Microsoft\\WinGet\\Links\\opencode.exe", -- Winget
+        home .. "\\.local\\bin\\opencode.exe",                   -- Cargo/pipx in user profile
+      }
+    end
+
+    -- Filter out empty strings and check each candidate
+    for _, c in ipairs(candidates) do
+      if c ~= "" and vim.fn.filereadable(c) == 1 and vim.fn.executable(c) == 1 then
+        opencode_bin = c
+        break
+      end
+    end
+  end
+  local cmd = { opencode_bin ~= "" and opencode_bin or "opencode" }
   if continue then
     cmd[#cmd + 1] = "--continue"
   end
