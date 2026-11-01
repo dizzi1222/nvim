@@ -143,7 +143,6 @@ return {
   "nickjvandyke/opencode.nvim",
   branch = "main",
   version = false, -- Las releases 1.x usan la API antigua.
-  commit = "4851ae503585dc5142ad66a98e8952a74e1f7b3a",
   name = "opencode-nick",
   dependencies = {
     { "folke/snacks.nvim", opts = { input = {}, picker = {}, terminal = {} } },

@@ -1,17 +1,29 @@
 local M = {}
 
----Find this project's managed TUI, including buffers no longer registered by Snacks.
+---Find a live OpenCode TUI, preferring this project, then an ancestor
+---(e.g. $HOME), then any other live TUI.
 ---@return integer? buf
 function M.find()
   local cwd = vim.fn.getcwd()
+  local exact, ancestor, any
+  local ancestor_len = -1
   for _, buf in ipairs(vim.api.nvim_list_bufs()) do
-    if vim.api.nvim_buf_is_valid(buf) and vim.b[buf].opencode_cwd == cwd then
-      local job = vim.bo[buf].channel
-      if job > 0 and vim.fn.jobwait({ job }, 0)[1] == -1 then
-        return buf
+    if vim.api.nvim_buf_is_valid(buf) then
+      local opencode_cwd = vim.b[buf].opencode_cwd
+      if opencode_cwd then
+        local job = vim.bo[buf].channel
+        if job > 0 and vim.fn.jobwait({ job }, 0)[1] == -1 then
+          if opencode_cwd == cwd then
+            exact = exact or buf
+          elseif cwd:sub(1, #opencode_cwd + 1) == opencode_cwd .. "/" and #opencode_cwd > ancestor_len then
+            ancestor, ancestor_len = buf, #opencode_cwd
+          end
+          any = any or buf
+        end
       end
     end
   end
+  return exact or ancestor or any
 end
 
 ---Show the existing TUI or start OpenCode v2 using its shared service.
