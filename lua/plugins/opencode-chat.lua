@@ -60,12 +60,65 @@ end
 
 -- ── Transcript v2: exportación oficial, sin consultar las tablas legacy ──
 local OC_TRANSCRIPT_PY = vim.fn.stdpath("config") .. "/opencode_transcript.py"
+local OC_TRANSCRIPT_OUT = vim.fn.expand("~/copy.md")
 
----Export a v2 session and display a searchable Markdown buffer, or copy it.
+---Refresh the named copy.md buffer from the transcript written to disk.
+---@return integer buf
+local function oc_refresh_transcript_buffer()
+  local buf = vim.fn.bufadd(OC_TRANSCRIPT_OUT)
+  vim.fn.bufload(buf)
+  vim.bo[buf].modifiable = true
+  -- Read entire file as string to handle binary content with embedded newlines
+  -- (readfile() splits on \n and breaks when content has embedded newlines in binary data)
+  local handle = io.open(OC_TRANSCRIPT_OUT, "r")
+  local content = ""
+  if handle then
+    content = handle:read("*a") or ""
+    handle:close()
+  end
+  -- Fallback to readfile if io.open fails
+  if content == "" then
+    content = table.concat(vim.fn.readfile(OC_TRANSCRIPT_OUT), "\n")
+  end
+  -- Split on \n only (not \r\n), preserving empty lines
+  local lines = vim.split(content, "\n", { plain = true, trimempty = false })
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+  vim.bo[buf].filetype = "markdown"
+  vim.bo[buf].modified = false
+  vim.bo[buf].modifiable = false
+  return buf
+end
+
+---Open the real copy.md buffer in a searchable floating window.
+---@param buf integer
+---@param session_id? string
+local function oc_open_transcript_float(buf, session_id)
+  local width = math.max(1, math.min(120, vim.o.columns - 6))
+  local height = math.max(1, math.min(40, vim.o.lines - 6))
+  local title = session_id and ("󱙔 OpenCode transcript — " .. session_id:sub(1, 8))
+    or "󱙔 OpenCode transcript — copy.md"
+  local win = vim.api.nvim_open_win(buf, true, {
+    relative = "editor",
+    style = "minimal",
+    border = "rounded",
+    width = width,
+    height = height,
+    row = math.max(0, math.floor((vim.o.lines - height) / 2) - 1),
+    col = math.max(0, math.floor((vim.o.columns - width) / 2)),
+    title = title,
+    title_pos = "center",
+  })
+  vim.wo[win].number = true
+  vim.api.nvim_win_set_cursor(win, { 1, 0 })
+  vim.keymap.set("n", "q", "<cmd>close<CR>", { buffer = buf, desc = "Cerrar transcript" })
+  vim.keymap.set("n", "<Esc>", "<cmd>close<CR>", { buffer = buf, desc = "Cerrar transcript" })
+end
+
+---Export a v2 session, refresh copy.md and display it, or copy it.
 ---@param session_id? string
 ---@param copy? boolean
 local function oc_transcript_float(session_id, copy)
-  local args = { "python3", OC_TRANSCRIPT_PY }
+  local args = { "python3", OC_TRANSCRIPT_PY, "--out", OC_TRANSCRIPT_OUT }
   if session_id then
     vim.list_extend(args, { "--session", session_id })
   else
@@ -79,32 +132,13 @@ local function oc_transcript_float(session_id, copy)
         vim.notify(vim.trim(result.stderr or "No se pudo exportar la sesión"), vim.log.levels.WARN)
         return
       end
+      local buf = oc_refresh_transcript_buffer()
       if copy then
         vim.fn.setreg("+", result.stdout)
-        vim.notify("Transcript de OpenCode copiado al portapapeles")
+        vim.notify("Transcript actualizado en copy.md y copiado al portapapeles")
         return
       end
-      local buf = vim.api.nvim_create_buf(false, true)
-      vim.api.nvim_buf_set_lines(buf, 0, -1, false, vim.split(result.stdout, "\n", { plain = true }))
-      vim.bo[buf].filetype = "markdown"
-      vim.bo[buf].bufhidden = "wipe"
-      vim.bo[buf].modifiable = false
-      local width = math.max(1, math.min(120, vim.o.columns - 6))
-      local height = math.max(1, math.min(40, vim.o.lines - 6))
-      local win = vim.api.nvim_open_win(buf, true, {
-        relative = "editor",
-        style = "minimal",
-        border = "rounded",
-        width = width,
-        height = height,
-        row = math.max(0, math.floor((vim.o.lines - height) / 2) - 1),
-        col = math.max(0, math.floor((vim.o.columns - width) / 2)),
-        title = "󱙔 OpenCode transcript",
-        title_pos = "center",
-      })
-      vim.wo[win].number = true
-      vim.keymap.set("n", "q", "<cmd>close<CR>", { buffer = buf, desc = "Cerrar transcript" })
-      vim.keymap.set("n", "<Esc>", "<cmd>close<CR>", { buffer = buf, desc = "Cerrar transcript" })
+      oc_open_transcript_float(buf, session_id)
     end)
   )
 end
