@@ -46,7 +46,8 @@ def list_sessions(directory=None):
     """List recent root sessions, optionally limited to the editor directory."""
     query = {"limit": 60, "order": "desc", "parentID": "null"}
     if directory:
-        query["directory"] = directory
+        # Resolve symlinks to match stored session paths (e.g. /home/diego -> /var/home/diego)
+        query["directory"] = str(Path(directory).resolve())
     sessions = cli_json("api", "GET", "/api/session?" + urlencode(query))["data"]
     return [s for s in sessions if not s.get("time", {}).get("archived")]
 
@@ -116,11 +117,18 @@ def main():
     args = parser.parse_args()
     try:
         if args.list:
-            print(json.dumps(list_sessions(args.directory), ensure_ascii=False))
+            sessions = list_sessions(args.directory)
+            # Fallback: if the exact directory has no sessions, show all recent ones
+            if not sessions and args.directory:
+                sessions = list_sessions(None)
+            print(json.dumps(sessions, ensure_ascii=False))
             return 0
         session_id = args.session
         if not session_id:
             sessions = list_sessions(args.directory)
+            # Fallback: if the editor cwd has no sessions, use the most recent one globally
+            if not sessions and args.directory:
+                sessions = list_sessions(None)
             if not sessions:
                 print("No hay sesiones OpenCode v2 para este directorio.", file=sys.stderr)
                 return 1
