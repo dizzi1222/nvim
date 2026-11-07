@@ -62,11 +62,17 @@ end
 local OC_TRANSCRIPT_PY = vim.fn.stdpath("config") .. "/opencode_transcript.py"
 local OC_TRANSCRIPT_OUT = vim.fn.expand("~/copy.md")
 
----Refresh the named copy.md buffer from the transcript written to disk.
+---Refresh the copy.md buffer from the transcript written to disk.
+---Uses an unnamed scratch buffer: naming it copy.md makes Neovim detect
+---filetype=markdown, which activates markview.nvim/treesitter/LSP and freezes
+---on transcripts with tens of thousands of lines.
 ---@return integer buf
 local function oc_refresh_transcript_buffer()
-  local buf = vim.fn.bufadd(OC_TRANSCRIPT_OUT)
-  vim.fn.bufload(buf)
+  local buf = vim.api.nvim_create_buf(false, true)
+  vim.bo[buf].buftype = "nofile"
+  vim.bo[buf].bufhidden = "wipe"
+  vim.bo[buf].swapfile = false
+  vim.bo[buf].undolevels = -1
   vim.bo[buf].modifiable = true
   -- Read entire file as string to handle binary content with embedded newlines
   -- (readfile() splits on \n and breaks when content has embedded newlines in binary data)
@@ -83,7 +89,9 @@ local function oc_refresh_transcript_buffer()
   -- Split on \n only (not \r\n), preserving empty lines
   local lines = vim.split(content, "\n", { plain = true, trimempty = false })
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
-  vim.bo[buf].filetype = "markdown"
+  -- Plain "text": never markdown, so markview/treesitter/LSP stay out of this buffer
+  vim.bo[buf].filetype = "text"
+  vim.bo[buf].syntax = ""
   vim.bo[buf].modified = false
   vim.bo[buf].modifiable = false
   return buf
@@ -118,29 +126,42 @@ end
 ---@param session_id? string
 ---@param copy? boolean
 local function oc_transcript_float(session_id, copy)
-  local args = { "python3", OC_TRANSCRIPT_PY, "--out", OC_TRANSCRIPT_OUT }
-  if session_id then
-    vim.list_extend(args, { "--session", session_id })
-  else
-    vim.list_extend(args, { "--directory", vim.fn.getcwd() })
+  local function build(use_dir)
+    local args = { "python3", OC_TRANSCRIPT_PY, "--out", OC_TRANSCRIPT_OUT }
+    if session_id then
+      vim.list_extend(args, { "--session", session_id })
+    elseif use_dir then
+      vim.list_extend(args, { "--directory", vim.fn.getcwd() })
+    end
+    return args
   end
-  vim.system(
-    args,
-    { text = true },
-    vim.schedule_wrap(function(result)
-      if result.code ~= 0 then
-        vim.notify(vim.trim(result.stderr or "No se pudo exportar la sesión"), vim.log.levels.WARN)
-        return
-      end
-      local buf = oc_refresh_transcript_buffer()
-      if copy then
-        vim.fn.setreg("+", result.stdout)
-        vim.notify("Transcript actualizado en copy.md y copiado al portapapeles")
-        return
-      end
-      oc_open_transcript_float(buf, session_id)
-    end)
-  )
+
+  local function run(args, retried)
+    vim.system(
+      args,
+      { text = true },
+      vim.schedule_wrap(function(result)
+        -- Retry once without --directory: picks the most recent session regardless of cwd
+        if result.code ~= 0 and not retried then
+          run(build(false), true)
+          return
+        end
+        if result.code ~= 0 then
+          vim.notify(vim.trim(result.stderr or "No se pudo exportar la sesión"), vim.log.levels.WARN)
+          return
+        end
+        local buf = oc_refresh_transcript_buffer()
+        if copy then
+          vim.fn.setreg("+", result.stdout)
+          vim.notify("Transcript actualizado en copy.md y copiado al portapapeles")
+          return
+        end
+        oc_open_transcript_float(buf, session_id)
+      end)
+    )
+  end
+
+  run(build(true), false)
 end
 
 ---Choose a v2 session using IDs, even when multiple sessions have the same title.

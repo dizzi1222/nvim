@@ -30,7 +30,8 @@ else
   dashboard_terminal_section = {
     pane = 2,
     section = "terminal",
-    cmd = "pokemon-colorscripts -rn 'vaporeon,rayquaza,darkrai,lucario,gardevoir,lopunny,garchomp,blaziken,charmander,totodile,metagross' --no-title; sleep 0.3",
+    -- cmd = "pokemon-colorscripts -rn 'vaporeon,rayquaza,darkrai,lucario,gardevoir,lopunny,garchomp,blaziken,charmander,totodile,metagross' --no-title; sleep 0.3",
+    cmd = "pokemon-colorscripts -rn 'darkrai,gardevoir,lopunny' --no-title; sleep 0.3",
     height = 19,
     padding = 1,
     indent = 13, -- <--- mayor número lo mueve más a la derecha
