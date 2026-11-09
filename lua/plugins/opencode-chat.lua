@@ -351,10 +351,10 @@ return {
     {
       "<leader>aC",
       function()
-        oc_transcript_float(nil, true)
+        tui_send("/export\r")
       end,
       mode = { "n", "x" },
-      desc = " 󰮮 Copiar transcript (OpenCode v2)",
+      desc = " 󰮮 Export session / Copiar Transcript (/export)",
     },
     {
       "<leader>aF",
@@ -399,6 +399,26 @@ return {
       oc_select_transcript,
       mode = { "n" },
       desc = "󱙔 Seleccionar sesión y abrir transcript",
+    },
+
+    -- ── copy.md (home multiOS) ───────────────────────────────
+    {
+      "<leader>sz",
+      function()
+        -- Resuelve ~/copy.md de forma portable (funciona en Linux, macOS y WSL)
+        local path = vim.fn.expand("~/copy.md")
+        if vim.fn.filereadable(path) == 0 then
+          vim.notify("copy.md no encontrado en: " .. path, vim.log.levels.WARN)
+          return
+        end
+        if vim.fn.executable("nemo") == 0 then
+          vim.notify("Nemo no está instalado", vim.log.levels.WARN)
+          return
+        end
+        vim.fn.jobstart({ "nemo", "--select", path }, { detach = true })
+      end,
+      mode = { "n" },
+      desc = "󰮮 Mostrar copy.md en Nemo",
     },
 
     -- ── Engram: Memoria persistente ────────────────────────────
@@ -542,6 +562,7 @@ return {
         { "<leader>aB", icon = { icon = "" } },
         { "<leader>so", icon = { icon = "󱙔" } },
         { "<leader>sO", icon = { icon = "󱙔" } },
+        { "<leader>sz", icon = { icon = "󰮮" } },
         -- Engram: Memory Persistent [Opencode, AI] + Atajos en: @plugins/which-key.lua:L23
       })
     end
