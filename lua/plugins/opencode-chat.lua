@@ -401,6 +401,32 @@ return {
       desc = "󱙔 Seleccionar sesión y abrir transcript",
     },
 
+    -- ── copy.md (home multiOS) ───────────────────────────────
+    {
+      "<leader>sz",
+      function()
+        -- Resuelve ~/copy.md de forma portable (funciona en Linux, macOS y WSL)
+        local path = vim.fn.expand("~/copy.md")
+        if vim.fn.filereadable(path) == 0 then
+          vim.notify("copy.md no encontrado en: " .. path, vim.log.levels.WARN)
+          return
+        end
+        local buf = vim.api.nvim_create_buf(false, true)
+        vim.bo[buf].buftype  = "nofile"
+        vim.bo[buf].bufhidden = "wipe"
+        vim.bo[buf].swapfile  = false
+        vim.bo[buf].undolevels = -1
+        vim.bo[buf].modifiable = true
+        local lines = vim.fn.readfile(path)
+        vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+        vim.bo[buf].filetype   = "markdown"
+        vim.bo[buf].modifiable = false
+        oc_open_transcript_float(buf, "copy.md")
+      end,
+      mode = { "n" },
+      desc = "󰮮 Abrir copy.md (home)",
+    },
+
     -- ── Engram: Memoria persistente ────────────────────────────
     -- <leader>em*  → grupal largo  |  <leader>m*  → espejo corto (sin chocar con markdown)
     {
@@ -542,6 +568,7 @@ return {
         { "<leader>aB", icon = { icon = "" } },
         { "<leader>so", icon = { icon = "󱙔" } },
         { "<leader>sO", icon = { icon = "󱙔" } },
+        { "<leader>sz", icon = { icon = "󰮮" } },
         -- Engram: Memory Persistent [Opencode, AI] + Atajos en: @plugins/which-key.lua:L23
       })
     end
