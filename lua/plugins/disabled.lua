@@ -16,7 +16,7 @@ return {
     -- URL: https://github.com/yetone/avante.nvim
     -- Description: Este plugin ofrece una serie de mejoras y herramientas para optimizar la edición de texto en Neovim.
     "yetone/avante.nvim", -- 8/10 | Codeium: 2/10
-    enabled = true, -- Integrado a NVIM, pocos modelos gratis,pero Ollama deepseek-cloud Clave, interfaz god, sugerencias like cursor
+    enabled = false, -- Integrado a NVIM, pocos modelos gratis,pero Ollama deepseek-cloud Clave, interfaz god, sugerencias like cursor
   },
   {
     "MeanderingProgrammer/render-markdown.nvim",
