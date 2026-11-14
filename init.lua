@@ -1,6 +1,10 @@
 -- ~/.config/nvim/init.lua
 -- Separo las FEATURE por N para acciones específicas
 
+-- Asegura el directorio de caché al arrancar (evita el E5560 de supermaven
+-- cuando ~/.cache/nvim no existe y su logger intenta mkdir en un fast event).
+pcall(vim.fn.mkdir, vim.fn.stdpath("cache"), "p")
+
 -- para que no guarde todo el texto/ moleste con el Space + Q + Q
 vim.opt.shada = "!,'100,<50,s10,h" -- Config minimalista
 
