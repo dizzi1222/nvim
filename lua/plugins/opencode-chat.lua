@@ -351,10 +351,10 @@ return {
     {
       "<leader>aC",
       function()
-        oc_transcript_float(nil, true)
+        tui_send("/export\r")
       end,
       mode = { "n", "x" },
-      desc = " 󰮮 Copiar transcript (OpenCode v2)",
+      desc = " 󰮮 Export session / Copiar Transcript (/export)",
     },
     {
       "<leader>aF",
