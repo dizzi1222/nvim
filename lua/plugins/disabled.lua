@@ -29,7 +29,7 @@ return {
   -- REMPLAZADO POR MARKVIEW
   {
     "MeanderingProgrammer/render-markdown.nvim",
-    enabled = false,
+    enabled = true,
   },
   --  Copilot AI Plugins for Neovim  ..
   -- {

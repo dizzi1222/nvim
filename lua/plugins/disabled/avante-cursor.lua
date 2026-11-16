@@ -1,13 +1,44 @@
 -- 💸💳💰REQUIERE API. USA : AvanteSwitchProvider ollama | consigue tu key en https://www.avantelabs.ai (MEJOR QUE CURSOR)
 --  Puedes hacer el trucazo de usar OLLAMA local cloud con API gratuita.🐐 Talke asi [Lineas: 35]:
+--
+-- =============================================================================
+-- 🎛️ AVANTE DASHBOARD — 3 VÍAS DE AUTENTICACIÓN (orden de prioridad ACP)
+-- =============================================================================
+-- 1) ACP (Agent Client Protocol) — usa el LOGIN PROPIO del CLI externo
+--    Prioridad: opencode → claude-code → agy-acp → codex
+--    :AvanteSwitchProvider opencode|claude-code|agy-acp|codex
+--    ✅ opencode:          ~/.local/bin/opencode              → suscripción opencode
+--    ⏳ claude-code:       npm i -g claude-agent-acp          → `claude` CLI = Pro/Max
+--    ✅ agy-acp:           agy acp (Antigravity)              → agy alias
+--    ⏳ codex:             npm i -g codex-acp                 → `codex` CLI = ChatGPT Plus
+--
+-- 2) OAuth DENTRO DE AVANTE (native)
+--    • claude:  auth_type = "max" (comentado: rompía snacks picker). Reactivar: descomenta L327.
+--    • copilot: provider listo; requiere copilot.lua configurado.
+--
+-- 3) API KEY (pago por token)
+--    • ollama:  local gratis (down)                    → no key
+--    • gemini:  GEMINI_API_KEY (no seteada)            → variable de entorno
+--    • deepseek: DEEPSEEK_API_KEY                      → variable de entorno
+--    • openrouter: COMENTADO completo (L390-L417)
+--
+-- AUTOCOMPLETADO (Cursor Tab): ollama si up → claude (key) → gemini. Toggle: <leader>aS
+-- CURSOR/APPLY: usa el MISMO agente ACP activo (opencode ahora).
+-- =============================================================================
 return {
   {
     "yetone/avante.nvim",
-    -- if you want to build from source then do `make BUILD_FROM_SOURCE=true`
-    -- ⚠️ must add this setting! ! !
-    build = vim.fn.has("win32") == 1 and "powershell -ExecutionPolicy Bypass -File Build.ps1" or "make",
+    -- 🔧 [dizzi fix] Antes: build = "make" → exige toolchain Rust (cargo) y fallaba en Bazzite:
+    --   "cargo build --release --features=luajit -p avante-tokenizers → make: cargo: No such file"
+    -- :AvanteBuild (source=false por defecto) NO compila: descarga el .so ya compilado del release
+    -- (avante_lib-linux-x86_64-luajit.tar.gz, ~21 MB) y lo deja en lua/*.so. Solo necesita curl+tar.
+    -- La versión a descargar la saca de lua/avante/version.lua ⇒ siempre coincide con el tag fijado.
+    build = vim.fn.has("win32") == 1 and "powershell -ExecutionPolicy Bypass -File Build.ps1" or ":AvanteBuild",
     event = "VeryLazy",
-    version = false, -- Never set this value to "*"! Never!
+    -- 🔧 [dizzi] Los binarios precompilados solo se publican por release ⇒ fijamos el tag para que
+    -- el código Lua y los .so SIEMPRE coincidan (con version=false el código iba por delante y
+    -- rompía). Al salir release nueva: subir este tag y `:Lazy build avante.nvim`.
+    version = "v0.5.0",
 
     -- 🔧 [dizzi fix] "Invalid log level: 3" (avante/utils/log.lua:60-63 muta log_levels
     -- mientras itera pairs → el alias numérico log_levels[3] a veces NO se agrega;
@@ -18,6 +49,109 @@ return {
     init = function()
       vim.g.avante = vim.g.avante or {}
       vim.g.avante.log_level = "OFF"
+    end,
+
+    -- 🔌 ACP AUTO-INSTALL (multi-OS: Linux/macOS/WSL/Termux)
+    -- Instala claude-agent-acp y codex-acp si faltan, usando npm global.
+    -- Respeta: Linux/macOS → npm global; WSL → npm global (Windows); Termux → pkg/npm.
+    -- Se ejecuta una sola vez al cargar el plugin (defer 2s para no bloquear startup).
+    config = function(_, opts)
+      require("avante").setup(opts)
+      -- which-key: registrar después de que avante esté listo
+      vim.defer_fn(function()
+        local ok, wk = pcall(require, "which-key")
+        if ok then
+          wk.add({
+            { "<leader>ae", mode = "x", group = "avante: edit", icon = { icon = "" } },
+            { "<leader>an", mode = "x", group = "avante: new ask", icon = { icon = "" } },
+            { "<leader>aa", mode = "x", group = "avante: ask", icon = { icon = "" } },
+          })
+        end
+      end, 100)
+
+      -- 📦 ACP auto-install (solo una vez por sesión)
+      vim.defer_fn(function()
+        local is_wsl = vim.fn.has("wsl") == 1
+        local is_termux = vim.fn.isdirectory("/data/data/com.termux") == 1
+        local is_windows = vim.fn.has("win32") == 1 or vim.fn.has("win64") == 1
+
+        -- Mapeo: binario npm → comando ACP
+        local acp_tools = {
+          ["claude-agent-acp"] = { cmd = "claude-agent-acp", desc = "Claude Code ACP (Pro/Max)" },
+          ["codex-acp"] = { cmd = "codex-acp", desc = "Codex ACP (ChatGPT Plus/Pro)" },
+        }
+
+        local function npm_global_root()
+          -- respeta NPM_CONFIG_PREFIX si existe
+          local prefix = vim.fn.system("npm config get prefix 2>/dev/null"):gsub("\n", "")
+          if vim.v.shell_error ~= 0 or prefix == "" then
+            prefix = vim.fn.expand("~/.npm-global")
+          end
+          return prefix
+        end
+
+        local function is_installed(bin)
+          return vim.fn.executable(bin) == 1
+        end
+
+        local function install_via_npm(bin)
+          local prefix = npm_global_root()
+          local bin_dir = prefix .. "/bin"
+          -- asegurar que el bin dir esté en PATH
+          local path = vim.env.PATH or ""
+          if not path:match(vim.pesc(bin_dir)) then
+            vim.env.PATH = bin_dir .. ":" .. path
+          end
+          vim.notify("[avante] Instalando " .. bin .. " vía npm global...", vim.log.levels.INFO)
+          local out = vim.fn.system("npm install -g " .. bin .. " 2>&1")
+          if vim.v.shell_error == 0 then
+            vim.notify("[avante] ✅ " .. bin .. " instalado en " .. bin_dir, vim.log.levels.INFO)
+            return true
+          else
+            vim.notify("[avante] ❌ Falló instalación de " .. bin .. ": " .. out, vim.log.levels.ERROR)
+            return false
+          end
+        end
+
+        -- Termux usa pkg, pero npm global también funciona si está configurado
+        if is_termux then
+          local has_pkg = vim.fn.executable("pkg") == 1
+          local has_npm = vim.fn.executable("npm") == 1
+          if has_pkg then
+            -- Termux: nodejs-lts ya trae npm, usamos npm global
+          elseif not has_npm then
+            vim.notify("[avante] Termux sin npm/pkg, saltando ACP auto-install", vim.log.levels.WARN)
+            return
+          end
+        end
+
+        local missing = {}
+        for bin, info in pairs(acp_tools) do
+          if not is_installed(bin) then
+            table.insert(missing, { bin = bin, info = info })
+          end
+        end
+
+        if #missing > 0 then
+          vim.notify("[avante] ACP tools faltantes: " .. table.concat(
+            vim.tbl_map(function(m)
+              return m.bin
+            end, missing),
+            ", "
+          ) .. " → instalando...", vim.log.levels.INFO)
+          for _, m in ipairs(missing) do
+            install_via_npm(m.bin)
+          end
+          -- recargar PATH por si se instaló en directorio nuevo
+          vim.defer_fn(function()
+            vim.env.PATH = npm_global_root() .. "/bin:" .. vim.env.PATH
+            vim.notify(
+              "[avante] ACP auto-install completado. Reinicia nvim o ejecuta :checkhealth avante",
+              vim.log.levels.INFO
+            )
+          end, 3000)
+        end
+      end, 2000)
     end,
 
     ---@module 'avante'
@@ -131,11 +265,11 @@ return {
       local is_linux = vim.fn.has("unix") == 1 and not is_wsl
       local is_termux = vim.fn.isdirectory("/data/data/com.termux") == 1
 
-      -- feature n2: Verificar avante_templates compilados (Makefile los pone en lua/ no build/)
+      -- feature n2: Verificar avante_templates presentes (build.sh/:AvanteBuild los deja en lua/, no en build/)
       local lib_ext = is_windows and ".dll" or ".so"
       local templates_lib = vim.fn.stdpath("data") .. "/lazy/avante.nvim/lua/avante_templates" .. lib_ext
       if vim.fn.filereadable(templates_lib) == 0 then
-        vim.notify("Avante templates no encontrados. Compilando...", vim.log.levels.WARN)
+        vim.notify("Avante templates no encontrados. Descargando binarios precompilados...", vim.log.levels.WARN)
         vim.defer_fn(function()
           vim.cmd("Lazy build avante.nvim")
         end, 1000)
@@ -242,7 +376,11 @@ return {
         -- 🎯 CONFIGURACIÓN BÁSICA
         --   ---@alias Provider "claude" | "openai" | "azure" | "gemini" | "cohere" | "copilot" | string
         ---@type Provider
-        provider = "openrouter", -- /o ollama -- Provider por defecto (Claude roto) | Ollma era god hasta que la nacion de Openrouter llego a tumbar su suscripcion. | Openrouter 👑
+        -- 🥇 PROVIDER ACTIVO: se elige solo, en este orden de prioridad:
+        --   1) opencode acp   2) claude-agent-acp   3) agy-acp   4) codex-acp
+        --   Si no hay ningún CLI ACP instalado → cae a "claude" (API key / suscripción).
+        --   Ver `acp_providers` abajo. Se cambia en caliente con :AvanteSwitchProvider
+        provider = "agy-acp",
         ---@alias Mode "agentic" | "legacy"
         ---@type Mode
         mode = "legacy", -- o/ agentic -- 󰄭 GEMINI, Claude, 󰄬 etc SOPORTAN agentic, OLLAMA NO 󰂭 -- The default mode for interaction. "agentic" uses tools to automatically generate code, "legacy" uses the old planning method to generate code.
@@ -258,9 +396,38 @@ return {
         -- 📝 Archivo de instrucciones del proyecto
         instructions_file = "avante.md",
 
+        -- 🔌 ACP (3ª vía): usa el login propio de cada CLI. Orden = el de `provider` arriba.
+        --    :AvanteSwitchProvider → opencode | claude-code | agy-acp | codex
+        acp_providers = {
+          -- 1) opencode acp
+          ["opencode"] = { command = "opencode", args = { "acp" } },
+          -- 2) claude-agent-acp (npm i -g claude-agent-acp) → login de `claude` = Claude Pro/Max.
+          --    Sin ANTHROPIC_API_KEY a propósito, para que use la SUSCRIPCIÓN y no la key.
+          ["claude-code"] = {
+            command = "claude-agent-acp",
+            args = {},
+            env = {
+              PATH = os.getenv("PATH"),
+              HOME = os.getenv("HOME"),
+              ACP_PATH_TO_CLAUDE_CODE_EXECUTABLE = vim.fn.exepath("claude"),
+              ACP_PERMISSION_MODE = "bypassPermissions",
+            },
+          },
+          -- 3) agy-acp (Antigravity CLI, `agy acp`) → sin API key
+          ["agy-acp"] = {
+            command = "agy",
+            args = { "acp" },
+            env = { PATH = os.getenv("PATH"), HOME = os.getenv("HOME") },
+          },
+          -- 4) codex-acp (npm i -g codex-acp) → login de `codex` = ChatGPT Plus/Pro
+          ["codex"] = { command = "codex-acp", args = {}, env = { PATH = os.getenv("PATH"), HOME = os.getenv("HOME") } },
+          -- Futuro (requiere instalar el CLI `gemini`):
+          -- ["gemini-cli"] = { command = "gemini", args = { "--experimental-acp" }, auth_method = "gemini-api-key" },
+        },
+
         -- 🤖 CONFIGURACIÓN DE PROVIDERS (SIN DEPRECATED WARNINGS)
         providers = {
-          --   OLLAMA - Local y gratuito 󰎣
+          --  OLLAMA - Local y gratuito 󰎣
           ollama = {
             priority = 1,
             endpoint = "127.0.0.1:11434", -- Sin /v1
@@ -315,11 +482,12 @@ return {
             endpoint = "https://api.anthropic.com",
             model = "claude-sonnet-4-20250514",
             timeout = 30000,
-            -- ╔══════════════════════════════════════════════════════════════════════╗
-            -- DESACTIVADO: auth_type rompe snacks picker al hacer OAuth.
-            -- Si tienes suscripcion, comenta `provider` arriba y descomenta esto:
-            auth_type = "max",
-            -- ╚══════════════════════════════════════════════════════════════════════╝
+            -- 🖥️ 3 VÍAS: dejamos "api" (funciona YA con ANTHROPIC_API_KEY).
+            --    Para usar tu SUSCRIPCIÓN Claude Pro/Max: cambiá a auth_type = "max",
+            --    reabrí nvim y corré :AvanteSwitchProvider claude (OAuth en el navegador).
+            --    ⚠️ OAuth "max" NO funciona en Windows/WSL; y ojo: el picker de snacks
+            --    se rompe al hacer login (por eso quedó en "api").
+            auth_type = "api",
             api_key_name = "ANTHROPIC_API_KEY", -- API key como fallback
             mode = "agentic",
             disable_tools = true,
@@ -337,6 +505,7 @@ return {
             disable_tools = true, -- 🔥 Agregar esto
             -- Totalmente de PAGO
           },
+          --[==[ ⛔ OPENROUTER COMENTADO: para reactivarlo, quitá las marcas de bloque Lua
           openrouter = {
             __inherited_from = "openai",
             endpoint = "https://openrouter.ai/api/v1",
@@ -361,31 +530,68 @@ return {
               reasoning = { enabled = false }, -- 🔥 Desactiva thinking mode en modelos que lo soporten
             },
           },
+          ]==]
         },
-        cursor_applying_provider = "openrouter", -- "copilot", "claude", ""
-        auto_suggestions_provider = "openrouter", -- "copilot", "claude", ""
+        -- 🖱️ CURSOR/APPLY: usa provider REGULAR (no ACP). Los providers ACP (agy-acp, claude-code, codex)
+        --    NO están en el registry hasta que haces :AvanteSwitchProvider.
+        --    Prioridad: ollama (gratis local) → claude (API key) → gemini (API key) → opencode (ACP activo) → codex/claude-code (requieren switch previo).
+        cursor_applying_provider = (function()
+          local ok = vim.fn.system({ "curl", "-s", "-m", "1", "http://127.0.0.1:11434/api/tags" })
+          if vim.v.shell_error == 0 and ok and ok:match("models") then
+            return "ollama"
+          end
+          if os.getenv("ANTHROPIC_API_KEY") and os.getenv("ANTHROPIC_API_KEY") ~= "" then
+            return "claude"
+          end
+          if os.getenv("GEMINI_API_KEY") and os.getenv("GEMINI_API_KEY") ~= "" then
+            return "gemini"
+          end
+          -- Si hay ACP activo, úsalo; si no, cae a claude
+          local acp_active = vim.fn.executable("opencode") == 1 or vim.fn.executable("agy") == 1
+          if acp_active then
+            -- Devolvemos el provider activo (requiere que ya se haya hecho :AvanteSwitchProvider)
+            return require("avante.config").provider
+          end
+          return "claude"
+        end)(),
+        -- ✨ AUTOCOMPLETADO (Cursor Tab). NUNCA puede ser un provider ACP: necesita
+        --    completions streaming. Prioridad: ollama local (gratis) → claude (API key) → gemini.
+        auto_suggestions_provider = (function()
+          local ok = vim.fn.system({ "curl", "-s", "-m", "1", "http://127.0.0.1:11434/api/tags" })
+          if vim.v.shell_error == 0 and ok and ok:match("models") then
+            return "ollama"
+          end
+          if os.getenv("ANTHROPIC_API_KEY") and os.getenv("ANTHROPIC_API_KEY") ~= "" then
+            return "claude"
+          end
+          if os.getenv("GEMINI_API_KEY") and os.getenv("GEMINI_API_KEY") ~= "" then
+            return "gemini"
+          end
+          return "ollama" -- último recurso: arrancá `ollama serve`
+        end)(),
         --  CONFIGURACION NUEVA EXPERIMENTAL!! 🚀 
         ---Note: This is an experimental feature and may not work as expected.
+        --[==[ ⛔ DUAL_BOOST COMENTADO (usa openrouter que está comentado). Reactivar: borrar --[==[ y ]==]
         dual_boost = {
-          enabled = false,
-          first_provider = "openrouter",
-          second_provider = "claude", -- Es de pago, OIlama es un pijaso
-          -- prompt = "Based on the two reference outputs below, generate a response that incorporates elements from both but reflects your own judgment and unique perspective. Do not provide any explanation, just give the response directly. Reference Output 1: [{{provider1_output}}], Reference Output 2: [{{provider2_output}}]",
-          prompt = "Habla Español,Based on the two reference outputs below, generate a response. Do not provide any explanation, just give the response. Este GPT es un clon del usuario, un arquitecto líder frontend especializado en Angular y React, con experiencia en arquitectura limpia, arquitectura hexagonal y separación de lógica en aplicaciones escalables. Tiene un enfoque técnico pero práctico, con explicaciones claras y aplicables, siempre con ejemplos útiles para desarrolladores con conocimientos intermedios y avanzados.\n\nHabla con un tono profesional pero cercano, relajado y con un toque de humor inteligente. Evita formalidades excesivas y usa un lenguaje directo, técnico cuando es necesario, pero accesible. Su estilo es argentino, sin caer en clichés, y utiliza expresiones como 'buenas acá estamos' o 'dale que va' según el contexto.\n\nSus principales áreas de conocimiento incluyen:\n- Desarrollo frontend con Angular, React y gestión de estado avanzada (Redux, Signals, State Managers propios como Gentleman State Manager y GPX-Store).\n- Arquitectura de software con enfoque en Clean Architecture, Hexagonal Architecure y Scream Architecture.\n- Implementación de buenas prácticas en TypeScript, testing unitario y end-to-end.\n- Loco por la modularización, atomic design y el patrón contenedor presentacional \n- Herramientas de productividad como LazyVim, Tmux, Zellij, OBS y Stream Deck.\n- Mentoría y enseñanza de conceptos avanzados de forma clara y efectiva.\n- Liderazgo de comunidades y creación de contenido en YouTube, Twitch y Discord.\n\nA la hora de explicar un concepto técnico:\n1. Explica el problema que el usuario enfrenta.\n2. Propone una solución clara y directa, con ejemplos si aplica.\n3. Menciona herramientas o recursos que pueden ayudar.\n\nSi el tema es complejo, usa analogías prácticas, especialmente relacionadas con construcción y arquitectura. Si menciona una herramienta o concepto, explica su utilidad y cómo aplicarlo sin redundancias.\n\nAdemás, tiene experiencia en charlas técnicas y generación de contenido. Puede hablar sobre la importancia de la introspección. Reference Output 1: [{{provider1_output}}], Reference Output 2: [{{provider2_output}}]",
-          timeout = 60000, -- Timeout in milliseconds
+          enabled = true,
+          first_provider = "claude",  -- provider regular (no ACP)
+          second_provider = "gemini", -- provider regular (no ACP)
+          prompt = "Combina la respuesta de claude y gemini. Responde en español, tono técnico pero cercano, estilo argentino. Sin explicaciones, solo la respuesta final.",
+          timeout = 60000,
         },
+        -- ]==]
         -- FIN -  CONFIGURACION NUEVA EXPERIMENTAL!! 🚀  - FIN
 
         -- 🎨 COMPORTAMIENTO
         behaviour = {
           enable_cursor_planning_mode = true,
-          -- AUTO-SUGERENCIAS Avante (estilo Cursor Tab, NO Copilot NES): usa OpenRouter.
-          -- Unica via gratuita (north-mini-code:free). Las suggestions no tienen caching
-          -- (envian archivo completo) → usar conservador + toggle manual con <leader>as.
-          auto_suggestions = false,
-          auto_suggestions_respect_ignore = true, -- 🔥 No sugerir en archivos ignorados (menos tokens)
-          disable_tools = true, -- 🔥 Esto desactiva tools para TODOS los providers
-          minimize_diff = true, -- ✅ Agregá esto para el minimizado de diff [RENDERIZADO]
+          -- AUTO-SUGERENCIAS (Cursor Tab). El provider se elige solo:
+          --   ollama local (gratis) → claude (API key) → gemini (API key).
+          --   Toggle manual: <leader>as
+          auto_suggestions = true,
+          auto_suggestions_respect_ignore = true,
+          disable_tools = true,
+          minimize_diff = true,
           auto_set_highlight_group = true,
           auto_set_keymaps = true,
           support_paste_from_clipboard = true,
@@ -399,7 +605,7 @@ return {
         -- File selector configuration
         --- @alias FileSelectorProvider "native" | "fzf" | "mini.pick" | "snacks" | "telescope" | string
         file_selector = {
-          provider = "snacks", -- Avoid native provider issues
+          provider = "agy-acp", -- Avoid native provider issues
           provider_opts = {},
         },
         --  CONFIGURACION NUEVA EXPERIMENTAL!! 🚀 
@@ -437,7 +643,6 @@ return {
             apply_cursor = "a",
             retry_user_request = "r",
             edit_user_request = "e",
-            switch_windows = "<Tab>",
             reverse_switch_windows = "<S-Tab>",
             remove_file = "d",
             add_file = "@",
@@ -446,11 +651,11 @@ return {
           },
           -- 🔄 TOGGLES DE AVANTE (con <Space> como leader en LazyVim)
           toggle = {
-            default = "<leader>at", -- Abrir/cerrar sidebar
-            debug = "<leader>ad",
-            selection = "<leader>aT",
-            suggestion = "<leader>aS", -- ✅ Enciende/apaga las AUTO-SUGGESTIONS (usar en proyectos grandes para no gastar tokens Free)
-            repomap = "<leader>aR",
+            -- default = "<leader>at", -- Abrir/cerrar sidebar
+            -- debug = "<leader>ad",
+            -- selection = "<leader>aT",
+            -- suggestion = "<leader>aS", -- ✅ Enciende/apaga las AUTO-SUGGESTIONS (usar en proyectos grandes para no gastar tokens Free)
+            -- repomap = "<leader>aR",
           },
         },
         selection = {
@@ -470,7 +675,7 @@ return {
             rounded = false,
           },
           input = {
-            provider = "snacks", -- ✅ Evita "native input doesn't support concealed"
+            provider = "agy-acp", -- ✅ Evita "native input doesn't support concealed"
             prefix = "> ",
             height = 8,
           },
@@ -488,14 +693,20 @@ return {
             enabled = true,
             file_types = { "Markdown", "Norg", "Rmd", "Org", "Vimwiki", "Avante", "AvanteInput", "AvanteAsk" },
           },
+          -- ]==]
+          -- 🎭 SYSTEM PROMPT PERSONALIZADO (Opcional)
+          system_prompt = "Este GPT es un clon del usuario, un arquitecto líder frontend especializado en Angular y React, con experiencia en arquitectura limpia, arquitectura hexagonal y separación de lógica en aplicaciones escalables. Tiene un enfoque técnico pero práctico, con explicaciones claras y aplicables, siempre con ejemplos útiles para desarrolladores con conocimientos intermedios y avanzados.\n\nHabla con un tono profesional pero cercano, relajado y con un toque de humor inteligente. Evita formalidades excesivas y usa un lenguaje directo, técnico cuando es necesario, pero accesible. Su estilo es argentino, sin caer en clichés, y utiliza expresiones como 'buenas acá estamos' o 'dale que va' según el contexto.\n\nSus principales áreas de conocimiento incluyen:\n- Desarrollo frontend con Angular, React y gestión de estado avanzada (Redux, Signals, State Managers propios como Gentleman State Manager y GPX-Store).\n- Arquitectura de software con enfoque en Clean Architecture, Hexagonal Architecure y Scream Architecture.\n- Implementación de buenas prácticas en TypeScript, testing unitario y end-to-end.\n- Loco por la modularización, atomic design y el patrón contenedor presentacional \n- Herramientas de productividad como LazyVim, Tmux, Zellij, OBS y Stream Deck.\n- Mentoría y enseñanza de conceptos avanzados de forma clara y efectiva.\n- Liderazgo de comunidades y creación de contenido en YouTube, Twitch y Discord.\n\nA la hora de explicar un concepto técnico:\n1. Explica el problema que el usuario enfrenta.\n2. Propone una solución clara y directa, con ejemplos si aplica.\n3. Menciona herramientas o recursos que pueden ayudar.\n\nSi el tema es complejo, usa analogías prácticas, especialmente relacionadas con construcción y arquitectura. Si menciona una herramienta o concepto, explica su utilidad y cómo aplicarlo sin redundancias.\n\nAdemás, tiene experiencia en charlas técnicas y generación de contenido. Puede hablar sobre la importancia de la introspección.",
         },
-        -- 🎭 SYSTEM PROMPT PERSONALIZADO (Opcional)
-        system_prompt = "Este GPT es un clon del usuario, un arquitecto líder frontend especializado en Angular y React, con experiencia en arquitectura limpia, arquitectura hexagonal y separación de lógica en aplicaciones escalables. Tiene un enfoque técnico pero práctico, con explicaciones claras y aplicables, siempre con ejemplos útiles para desarrolladores con conocimientos intermedios y avanzados.\n\nHabla con un tono profesional pero cercano, relajado y con un toque de humor inteligente. Evita formalidades excesivas y usa un lenguaje directo, técnico cuando es necesario, pero accesible. Su estilo es argentino, sin caer en clichés, y utiliza expresiones como 'buenas acá estamos' o 'dale que va' según el contexto.\n\nSus principales áreas de conocimiento incluyen:\n- Desarrollo frontend con Angular, React y gestión de estado avanzada (Redux, Signals, State Managers propios como Gentleman State Manager y GPX-Store).\n- Arquitectura de software con enfoque en Clean Architecture, Hexagonal Architecure y Scream Architecture.\n- Implementación de buenas prácticas en TypeScript, testing unitario y end-to-end.\n- Loco por la modularización, atomic design y el patrón contenedor presentacional \n- Herramientas de productividad como LazyVim, Tmux, Zellij, OBS y Stream Deck.\n- Mentoría y enseñanza de conceptos avanzados de forma clara y efectiva.\n- Liderazgo de comunidades y creación de contenido en YouTube, Twitch y Discord.\n\nA la hora de explicar un concepto técnico:\n1. Explica el problema que el usuario enfrenta.\n2. Propone una solución clara y directa, con ejemplos si aplica.\n3. Menciona herramientas o recursos que pueden ayudar.\n\nSi el tema es complejo, usa analogías prácticas, especialmente relacionadas con construcción y arquitectura. Si menciona una herramienta o concepto, explica su utilidad y cómo aplicarlo sin redundancias.\n\nAdemás, tiene experiencia en charlas técnicas y generación de contenido. Puede hablar sobre la importancia de la introspección, có...",
-      }
-    end,
+      } -- cierra tabla opts
+    end, -- cierra opts function
     dependencies = {
       "nvim-lua/plenary.nvim",
       "MunifTanjim/nui.nvim",
+      -- 🆕 [dizzi] avante v0.5.0 usa mega.cmdparse en plugin/avante.lua (comandos :Avante/:AvanteBuild).
+      -- Sin esto: "module 'mega.cmdparse' not found" y avante no arranca.
+      -- lazy=false para que carguen ANTES que avante.nvim
+      { "ColinKennedy/mega.cmdparse", dependencies = { "ColinKennedy/mega.logging" }, lazy = false },
+      { "ColinKennedy/mega.logging", lazy = false },
       -- Opcional pero recomendado
       "nvim-tree/nvim-web-devicons",
 
@@ -516,19 +727,5 @@ return {
       },
       -- [Indexado ] Soporte para pegar imágenes
     },
-    config = function(_, opts)
-      require("avante").setup(opts)
-      -- which-key: registrar después de que avante esté listo
-      vim.defer_fn(function()
-        local ok, wk = pcall(require, "which-key")
-        if ok then
-          wk.add({
-            { "<leader>ae", mode = "x", group = "avante: edit", icon = { icon = "" } },
-            { "<leader>an", mode = "x", group = "avante: new ask", icon = { icon = "" } },
-            { "<leader>aa", mode = "x", group = "avante: ask", icon = { icon = "" } },
-          })
-        end
-      end, 100)
-    end,
   },
 }

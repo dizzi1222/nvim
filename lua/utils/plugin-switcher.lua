@@ -13,6 +13,16 @@ local PLUGINS_CONFIG = {
     file = "avante-cursor.lua",
     category = "AI Assistant",
   },
+  -- 🎛️ Avante Auth/ACP Modes (sub-entry para selector de modo)
+  avante_mode = {
+    name = "Avante · Modo Auth/ACP",
+    icon = "󰿆",
+    file = "avante-cursor.lua",
+    category = "AI Assistant",
+    -- Este es un "virtual plugin" que usa el mismo archivo que avante
+    -- pero permite cambiar el provider/acp_provider en caliente
+    virtual = true,
+  },
   copilot_chat = {
     name = "CopilotChat",
     icon = "",
@@ -639,6 +649,14 @@ function M.interactive_toggle()
           table.insert(choices, mode_text)
           choices_map[mode_text] = "__neocursor_mode__"
         end
+        -- Entrada extra: avante_mode tiene presets de Auth/ACP.
+        if item.key == "avante_mode" then
+          local cur, _ = M.avante_current()
+          local mode_status = cur.enabled and ("󰗠 " .. cur.provider) or "🚫 (off)"
+          local mode_text = ("    ⚙️   modo: %s"):format(mode_status)
+          table.insert(choices, mode_text)
+          choices_map[mode_text] = "__avante_mode__"
+        end
       end
     end
   end
@@ -659,6 +677,10 @@ function M.interactive_toggle()
     local plugin_key = choices_map[choice]
     if plugin_key == "__neocursor_mode__" then
       M.neocursor_mode_picker()
+      return
+    end
+    if plugin_key == "__avante_mode__" then
+      M.avante_mode_picker()
       return
     end
     if plugin_key then
@@ -743,9 +765,191 @@ function M.get_plugin_config(plugin_key)
   return PLUGINS_CONFIG[plugin_key]
 end
 
--- ⭐ FUNCIÓN PÚBLICA: Listar todos los plugins
-function M.list_plugins()
-  return PLUGINS_CONFIG
+-- =============================================================================
+-- 🎛️ AVANTE PRESETS — Modos de Auth/ACP (similar a neocursor)
+-- =============================================================================
+local AVANTE_FILE = "avante-cursor.lua"
+local AVANTE_PRESETS = {
+  -- OAuth modes (native Avante OAuth)
+  ["max"] = {
+    auth_type = "max",
+    provider = "claude",
+    description = "Claude Pro/Max (OAuth nativo, auth_type=max)",
+  },
+  ["copilot"] = {
+    auth_type = "api", -- copilot usa token de copilot.lua
+    provider = "copilot",
+    description = "GitHub Copilot (token OAuth de copilot.lua)",
+  },
+
+  -- ACP modes (Agent Client Protocol - CLIs externos)
+  ["agy-acp"] = {
+    provider = "agy-acp",
+    description = "Antigravity CLI (agy acp) — gratis, sin key",
+  },
+  ["codex"] = {
+    provider = "codex",
+    description = "Codex CLI (codex-acp) — ChatGPT Plus/Pro",
+  },
+  ["openrouter"] = {
+    provider = "openrouter",
+    description = "OpenRouter API (comentado en config, requiere descomentar)",
+  },
+  ["opencode"] = {
+    provider = "opencode",
+    description = "OpenCode (opencode acp) — suscripción OpenCode",
+  },
+  ["claude-code"] = {
+    provider = "claude-code",
+    description = "Claude Code (claude-agent-acp) — usa `claude` CLI = Pro/Max",
+  },
+}
+
+-- ¿Dónde vive avante-cursor.lua hoy? (plugins/ activo · disabled/ off)
+local function avante_active_file()
+  local active = get_plugins_path() .. "/" .. AVANTE_FILE
+  if vim.fn.filereadable(active) == 1 then
+    return active, true
+  end
+  local dis = get_disabled_path() .. "/" .. AVANTE_FILE
+  if vim.fn.filereadable(dis) == 1 then
+    return dis, false
+  end
+  return active, true -- asume activo si no existe en ningún lado
 end
+
+-- Estado actual: { enabled, provider, auth_type }
+local function avante_current()
+  local file, enabled = avante_active_file()
+  local provider, auth_type = "opencode", "api"
+  
+  -- Intentar obtener la config runtime de Avante (más confiable que parsear el archivo)
+  local ok, cfg = pcall(require, "avante.config")
+  if ok and cfg then
+    provider = cfg.provider or provider
+    auth_type = cfg.auth_type or auth_type
+  else
+    -- Fallback: parsear el archivo (evitando secciones windows/input/ask)
+    local in_windows_section = false
+    for _, line in ipairs(vim.fn.readfile(file)) do
+      if not line:match("^%s*%-%-") then
+        if line:match("windows%s*=") or line:match("input%s*=") or line:match("ask%s*=") then
+          in_windows_section = true
+        elseif line:match("^%s*}") and in_windows_section then
+          in_windows_section = false
+        elseif not in_windows_section then
+          local p = line:match('provider%s*=%s*"([^"]+)"')
+          if p then provider = p end
+          local a = line:match('auth_type%s*=%s*"([^"]+)"')
+          if a then auth_type = a end
+        end
+      end
+    end
+  end
+  
+  return { enabled = enabled, provider = provider, auth_type = auth_type }, file
+end
+
+-- Reescribe provider/auth_type en el archivo activo de avante.
+local function avante_apply(mode)
+  local preset = AVANTE_PRESETS[mode]
+  if not preset then
+    return false
+  end
+  local cur, _ = avante_current()
+  if not cur.enabled then
+    move_plugin("avante", false)
+  end
+  local f, _ = avante_active_file()
+  if vim.fn.filereadable(f) ~= 1 then
+    vim.notify("⚠️ avante-cursor.lua no encontrado", vim.log.levels.ERROR)
+    return false
+  end
+  local content = vim.fn.readfile(f)
+  local changed = false
+  for i, line in ipairs(content) do
+    -- Caso 1: provider = "string"
+    if line:match('^%s*provider%s*=%s*"[^"]*"') then
+      if not line:find(('provider = "%s"'):format(preset.provider), 1, true) then
+        content[i] = line:gsub('provider%s*=%s*"[^"]*"', ('provider = "%s"'):format(preset.provider))
+        changed = true
+      end
+    -- Caso 2: provider = (function() ... end)()  -- auto-detect function
+    elseif line:match('^%s*provider%s*=%s*%s*%(') then
+      -- Reemplazar toda la función por el string del provider
+      local indent = line:match('^(%s*)')
+      content[i] = indent .. ('provider = "%s",'):format(preset.provider)
+      changed = true
+    elseif preset.auth_type and line:match('^%s*auth_type%s*=%s*"[^"]*"') then
+      if not line:find(('auth_type = "%s"'):format(preset.auth_type), 1, true) then
+        content[i] = line:gsub('auth_type%s*=%s*"[^"]*"', ('auth_type = "%s"'):format(preset.auth_type))
+        changed = true
+      end
+    end
+  end
+  if changed then
+    vim.fn.writefile(content, f)
+  end
+  return true
+end
+
+-- ⭐ FUNCIÓN PÚBLICA: preset de Avante (ciclo include-toggle)
+function M.preset_avante(mode)
+  local preset = AVANTE_PRESETS[mode]
+  if not preset then
+    vim.notify("⚠️ Modo Avante desconocido: " .. tostring(mode), vim.log.levels.ERROR)
+    return
+  end
+  local cur, _ = avante_current()
+  local label = preset.description
+  if cur.enabled and cur.provider == preset.provider and (not preset.auth_type or cur.auth_type == preset.auth_type) then
+    move_plugin("avante", true)
+    vim.notify(" Avante ❌ desactivado (modo " .. label .. ")", vim.log.levels.INFO)
+    return
+  end
+  avante_apply(mode)
+  vim.notify(" Avante → modo " .. label .. "\n🔄 Reinicia Neovim para aplicar", vim.log.levels.INFO)
+end
+
+-- ⭐ FUNCIÓN PÚBLICA: abrir el selector de modo Avante directo
+function M.avante_mode_picker()
+  local cur, _ = avante_current()
+  local choices = {}
+  local map = {}
+  for mode, preset in pairs(AVANTE_PRESETS) do
+    local active = cur.enabled and cur.provider == preset.provider and (not preset.auth_type or cur.auth_type == preset.auth_type)
+    local mark = active and "󰗠  |" or (not cur.enabled and "🚫  |" or "  |")
+    local choice = ("  %s 󰿆 %s"):format(mark, preset.description)
+    table.insert(choices, choice)
+    map[choice] = mode
+  end
+  table.insert(choices, "󰜺 Cancelar")
+  vim.ui.select(choices, {
+    prompt = "󰿆 Avante · Modo Auth/ACP :",
+    format_item = function(item)
+      return item
+    end,
+  }, function(choice)
+    if not choice or choice:match("󰜺") then
+      return
+    end
+    M.preset_avante(map[choice])
+  end)
+end
+
+-- ⭐ FUNCIÓN PÚBLICA: Obtener estado de un plugin
+function M.is_disabled(plugin_key)
+  return is_plugin_disabled(plugin_key)
+end
+
+-- ⭐ FUNCIÓN PÚBLICA: Obtener config de un plugin
+function M.get_plugin_config(plugin_key)
+  return PLUGINS_CONFIG[plugin_key]
+end
+
+-- ⭐ FUNCIÓN PÚBLICA: Avante presets
+M.preset_avante = M.preset_avante
+M.avante_mode_picker = M.avante_mode_picker
+M.avante_current = avante_current
 
 return M
