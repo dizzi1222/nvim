@@ -28,7 +28,7 @@ return {
         icon = { icon = "󰍛", color = "pink" },
       },
       { "<leader>b", group = "󰓩 Buffer", icon = { icon = "󰓩", color = "green" } },
-      { "<leader>h", group = "󰓹 Tag Menu", icon = { icon = "󰛢", color = "blue" } },
+      { "<leader>h", group = "󰵰 Hermes Agent / 󰓹 Tag Menu", icon = { icon = "󰛢", color = "blue" } },
       { "<leader>m", group = "󰍔 Markdown / 󰍛 Engram", icon = { icon = "󰍔", color = "red" } },
       { "<leader>?", group = "show all keymaps", icon = { icon = "󰌌", color = "cyan" } },
       { "<leader>k", group = "󰌌 screenkey", icon = { icon = "󰳽", color = "cyan" } },
