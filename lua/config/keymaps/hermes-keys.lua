@@ -32,7 +32,10 @@ local function visual_selection(buf)
     return table.concat(lines, "\n")
   end
 
-  return table.concat(vim.api.nvim_buf_get_text(buf, first_row, first_col - 1, last_row, last_col, {}), "\n")
+  return table.concat(
+    vim.api.nvim_buf_get_text(buf, first_row, first_col - 1, last_row, last_col, {}),
+    "\n"
+  )
 end
 
 local function build_context()
@@ -108,8 +111,24 @@ local function send_all_buffers()
   end
 end
 
-vim.keymap.set("n", "<leader>ht", terminal.toggle, { desc = "Hermes: Alternar TUI" })
-vim.keymap.set("n", "<leader>hc", terminal.focus, { desc = "Hermes: Continuar sesión" })
+vim.keymap.set("n", "<leader>ht", function()
+  local has_vps = terminal.profile_has_vps_config and terminal.profile_has_vps_config("vps")
+  if has_vps then
+    vim.ui.select({ "default", "vps" }, { prompt = "Hermes: Seleccionar perfil: " }, function(choice)
+      if choice then
+        if choice == "default" then
+          terminal.smart_toggle()
+        else
+          terminal.smart_toggle_profile(choice)
+        end
+      end
+    end)
+  else
+    terminal.smart_toggle()
+  end
+end, { desc = "Hermes: Abrir TUI (selector si hay VPS)" })
+
+vim.keymap.set("n", "<leader>hc", terminal.focus_and_resume, { desc = "Hermes: Reanudar + abrir selector de sesiones (Ctrl+X)" })
 vim.keymap.set("n", "<leader>ho", terminal.focus, { desc = "Hermes: Enfocar TUI" })
 vim.keymap.set({ "n", "x" }, "<leader>hs", send_context, { desc = "Hermes: Enviar contexto al prompt" })
 vim.keymap.set("n", "<leader>hb", send_buffer, { desc = "Hermes: Enviar buffer actual" })
@@ -132,6 +151,7 @@ local slash_mappings = {
   { "<leader>hvf", "/voice off", "Hermes: Desactivar voz" },
   { "<leader>hvs", "/voice status", "Hermes: Ver estado de voz" },
   { "<leader>hvt", "/voice tts", "Hermes: Alternar voz TTS" },
+  { "<leader>hL", "/limpieza", "Hermes: Limpieza del sistema" },
 }
 
 for _, mapping in ipairs(slash_mappings) do
@@ -166,3 +186,15 @@ vim.keymap.set("n", "<leader>hq", function()
     end
   end)
 end, { desc = "Hermes: Encolar prompt para el siguiente turno" })
+
+vim.keymap.set("n", "<leader>hR", function()
+  vim.ui.input({ prompt = "Nuevo título de sesión: " }, function(title)
+    if title == nil then
+      return
+    end
+    title = vim.trim(title)
+    if title ~= "" then
+      terminal.send_command("/title " .. title)
+    end
+  end)
+end, { desc = "Hermes: Renombrar sesión actual (/title)" })
