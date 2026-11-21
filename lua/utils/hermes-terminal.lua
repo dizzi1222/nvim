@@ -55,6 +55,233 @@ local function current_tab_window_for(buf)
   end
 end
 
+---Check if a Hermes profile has VPS/hostinger configuration.
+---@param profile_name string
+---@return boolean
+function M.profile_has_vps_config(profile_name)
+  local config_path = vim.fn.expand("~/.hermes/profiles/" .. profile_name .. "/config.yaml")
+  if vim.fn.filereadable(config_path) == 0 then
+    return false
+  end
+  local content = vim.fn.readfile(config_path)
+  for _, line in ipairs(content) do
+    if line:match("hostinger") or line:match("vps") then
+      return true
+    end
+  end
+  return false
+end
+
+local function profile_has_vps_config(profile_name)
+  return M.profile_has_vps_config(profile_name)
+end
+
+---Smart toggle: focus existing session or start new one with profile (no --continue if fresh).
+---@param profile_name string
+---@return table?
+function M.smart_toggle_profile(profile_name)
+  local binary = hermes_binary()
+  if not binary then
+    return nil
+  end
+
+  local root = M.project_root()
+  local previous = terminals[root]
+  local previous_buf = previous and previous.buf or nil
+  local win = previous_buf and current_tab_window_for(previous_buf) or nil
+  local previous_source_buf
+
+  local has_live_session = terminal_is_live(previous)
+
+  if win then
+    previous_source_buf = previous.previous_buf
+    if not previous_source_buf or not vim.api.nvim_buf_is_valid(previous_source_buf) then
+      previous_source_buf = vim.api.nvim_win_get_buf(win)
+    end
+  else
+    local source_win = vim.api.nvim_get_current_win()
+    previous_source_buf = vim.api.nvim_win_get_buf(source_win)
+    vim.cmd("botright vsplit")
+    win = vim.api.nvim_get_current_win()
+    vim.api.nvim_win_set_width(win, math.max(30, math.floor(vim.o.columns * terminal_width)))
+  end
+
+  local buf = new_terminal_buffer()
+  vim.api.nvim_win_set_buf(win, buf)
+  vim.api.nvim_set_current_win(win)
+
+  local args = { binary, "--tui", "-p", profile_name }
+  if has_live_session then
+    table.insert(args, 3, "--continue")
+  end
+  local job = vim.fn.termopen(args, { cwd = root })
+  if job <= 0 then
+    vim.api.nvim_win_set_buf(win, previous_source_buf)
+    pcall(vim.api.nvim_buf_delete, buf, { force = true })
+    vim.notify("No se pudo iniciar Hermes TUI (perfil: " .. profile_name .. ")", vim.log.levels.ERROR)
+    return nil
+  end
+
+  local entry = {
+    buf = buf,
+    job = job,
+    previous_buf = previous_source_buf,
+  }
+  terminals[root] = entry
+
+  if previous_buf and vim.api.nvim_buf_is_valid(previous_buf) and #vim.fn.win_findbuf(previous_buf) == 0 then
+    pcall(vim.api.nvim_buf_delete, previous_buf, { force = true })
+  end
+
+  vim.cmd.startinsert()
+  return entry
+end
+
+---Smart toggle: focus existing session or start new one.
+--- Detects VPS config and shows profile selector only when VPS exists.
+--- Acts as a true toggle: hides window if focused, otherwise shows/focuses.
+---@return table?
+function M.smart_toggle()
+  local binary = hermes_binary()
+  if not binary then
+    return nil
+  end
+
+  local root = M.project_root()
+  local previous = terminals[root]
+  local previous_buf = previous and previous.buf or nil
+  local win = previous_buf and current_tab_window_for(previous_buf) or nil
+
+  local has_live_session = terminal_is_live(previous)
+
+  -- TRUE TOGGLE: if window exists and is currently focused -> HIDE it
+  if has_live_session and win then
+    local current_win = vim.api.nvim_get_current_win()
+    if current_win == win then
+      -- Hide the window (toggle off)
+      if #vim.api.nvim_tabpage_list_wins(vim.api.nvim_get_current_tabpage()) > 1 then
+        vim.api.nvim_win_hide(win)
+      elseif previous.previous_buf and vim.api.nvim_buf_is_valid(previous.previous_buf) then
+        vim.api.nvim_win_set_buf(win, previous.previous_buf)
+      else
+        vim.api.nvim_win_set_buf(win, vim.api.nvim_create_buf(true, false))
+      end
+      return previous
+    else
+      -- Window exists but not focused -> focus it (toggle on)
+      vim.api.nvim_set_current_win(win)
+      vim.cmd.startinsert()
+      return previous
+    end
+  end
+
+  -- If there's a live session but no window, reuse the buffer in a new split
+  local previous_source_buf
+  if has_live_session and previous_buf and vim.api.nvim_buf_is_valid(previous_buf) then
+    local source_win = vim.api.nvim_get_current_win()
+    previous_source_buf = vim.api.nvim_win_get_buf(source_win)
+    vim.cmd("botright vsplit")
+    win = vim.api.nvim_get_current_win()
+    vim.api.nvim_win_set_width(win, math.max(30, math.floor(vim.o.columns * terminal_width)))
+    vim.api.nvim_win_set_buf(win, previous_buf)
+    vim.cmd.startinsert()
+    return previous
+  end
+
+  -- No live session: create new terminal
+  local source_win = vim.api.nvim_get_current_win()
+  previous_source_buf = vim.api.nvim_win_get_buf(source_win)
+  vim.cmd("botright vsplit")
+  win = vim.api.nvim_get_current_win()
+  vim.api.nvim_win_set_width(win, math.max(30, math.floor(vim.o.columns * terminal_width)))
+
+  local buf = new_terminal_buffer()
+  vim.api.nvim_win_set_buf(win, buf)
+  vim.api.nvim_set_current_win(win)
+
+  -- Decide profile: default (no -p) unless VPS config exists
+  local use_vps = M.profile_has_vps_config("vps")
+  local profile_arg = use_vps and "-p vps" or nil
+
+  local args = { binary, "--tui" }
+  if profile_arg then
+    table.insert(args, profile_arg)
+  end
+
+  local job = vim.fn.termopen(args, { cwd = root })
+  if job <= 0 then
+    vim.api.nvim_win_set_buf(win, previous_source_buf)
+    pcall(vim.api.nvim_buf_delete, buf, { force = true })
+    vim.notify("No se pudo iniciar Hermes TUI", vim.log.levels.ERROR)
+    return nil
+  end
+
+  local entry = {
+    buf = buf,
+    job = job,
+    previous_buf = previous_source_buf,
+  }
+  terminals[root] = entry
+
+  vim.cmd.startinsert()
+  return entry
+end
+
+---Start Hermes TUI with a specific profile (always uses --continue).
+---@param profile_name string
+---@return table?
+function M.focus_profile(profile_name)
+  local binary = hermes_binary()
+  if not binary then
+    return nil
+  end
+
+  local root = M.project_root()
+  local previous = terminals[root]
+  local previous_buf = previous and previous.buf or nil
+  local win = previous_buf and current_tab_window_for(previous_buf) or nil
+  local previous_source_buf
+
+  if win then
+    previous_source_buf = previous.previous_buf
+    if not previous_source_buf or not vim.api.nvim_buf_is_valid(previous_source_buf) then
+      previous_source_buf = vim.api.nvim_win_get_buf(win)
+    end
+  else
+    local source_win = vim.api.nvim_get_current_win()
+    previous_source_buf = vim.api.nvim_win_get_buf(source_win)
+    vim.cmd("botright vsplit")
+    win = vim.api.nvim_get_current_win()
+    vim.api.nvim_win_set_width(win, math.max(30, math.floor(vim.o.columns * terminal_width)))
+  end
+
+  local buf = new_terminal_buffer()
+  vim.api.nvim_win_set_buf(win, buf)
+  vim.api.nvim_set_current_win(win)
+
+  local job = vim.fn.termopen({ binary, "--tui", "--continue", "-p", profile_name }, { cwd = root })
+  if job <= 0 then
+    vim.api.nvim_win_set_buf(win, previous_source_buf)
+    pcall(vim.api.nvim_buf_delete, buf, { force = true })
+    vim.notify("No se pudo iniciar Hermes TUI (perfil: " .. profile_name .. ")", vim.log.levels.ERROR)
+    return nil
+  end
+
+  local entry = {
+    buf = buf,
+    job = job,
+    previous_buf = previous_source_buf,
+  }
+  terminals[root] = entry
+
+  if previous_buf and vim.api.nvim_buf_is_valid(previous_buf) and #vim.fn.win_findbuf(previous_buf) == 0 then
+    pcall(vim.api.nvim_buf_delete, previous_buf, { force = true })
+  end
+
+  vim.cmd.startinsert()
+  return entry
+end
+
 local function start_terminal(root)
   local binary = hermes_binary()
   if not binary then
@@ -136,6 +363,31 @@ function M.focus()
   vim.cmd.startinsert()
   return entry
 end
+
+---Focus Hermes and immediately send /resume to show session picker.
+---@return table?
+function M.focus_and_resume()
+  local entry = M.focus()
+  if not entry then
+    return nil
+  end
+  -- Wait for TUI to be ready, then send /resume + Enter
+  -- Retry a few times in case TUI takes longer to start
+  local attempts = 0
+  local max_attempts = 10
+  local function try_send()
+    attempts = attempts + 1
+    if vim.fn.jobwait({ entry.job }, 0)[1] == -1 then
+      -- Send Ctrl+X (raw byte 0x18) to open session picker directly
+      vim.api.nvim_chan_send(entry.job, "\x18")
+    elseif attempts < max_attempts then
+      vim.defer_fn(try_send, 200)
+    end
+  end
+  vim.defer_fn(try_send, 500)
+  return entry
+end
+
 
 ---Hide Hermes in the current tab, or show and focus it when hidden.
 function M.toggle()
