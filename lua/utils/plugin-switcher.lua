@@ -11,17 +11,20 @@ local PLUGINS_CONFIG = {
     name = "Avante",
     icon = "",
     file = "avante-cursor.lua",
+    repo = "yetone/avante.nvim",
     category = "AI Assistant",
   },
   -- 🎛️ Avante Auth/ACP Modes (sub-entry para selector de modo)
   avante_mode = {
     name = "Avante · Modo Auth/ACP",
     icon = "󰿆",
-    file = "avante-cursor.lua",
+     file = "avante-cursor.lua",
     category = "AI Assistant",
     -- Este es un "virtual plugin" que usa el mismo archivo que avante
     -- pero permite cambiar el provider/acp_provider en caliente
+    -- Seleccionarlo abre el picker de modo (NO mueve archivos); su estado = el de avante
     virtual = true,
+    alias = "avante",
   },
   copilot_chat = {
     name = "CopilotChat",
@@ -39,6 +42,7 @@ local PLUGINS_CONFIG = {
     name = "Antigravity CLI",
     icon = "󰨞",
     file = "antigravity.lua",
+    repo = "NakLast/antigravity-cli.nvim",
     category = "AI Assistant",
   },
   codex_cli = {
@@ -65,6 +69,7 @@ local PLUGINS_CONFIG = {
     name = "Copilot NES [ 󰞑 ] N.3",
     icon = "󰯈",
     file = "copilot.lua",
+    alias = "copilot", -- mismo plugin/archivo que copilot: comparten estado
     category = "🔮🛸 Cursor TAB 👾☄️",
   },
 
@@ -111,12 +116,14 @@ local PLUGINS_CONFIG = {
     name = "Copilot",
     icon = "",
     file = "copilot.lua",
+    repo = "zbirenbaum/copilot.lua",
     category = "AI Completion",
   },
   supermaven = {
     name = "Supermaven",
     icon = "󰓅",
     file = "supermaven.lua",
+    repo = "supermaven-inc/supermaven-nvim",
     category = "AI Completion",
   },
   tabnine = {
@@ -129,6 +136,7 @@ local PLUGINS_CONFIG = {
     name = "Codeium",
     icon = "",
     file = "windsurf-codeium.lua",
+    repo = "Exafunction/windsurf.nvim",
     category = "AI Completion",
   },
   fittencode = {
@@ -163,6 +171,7 @@ local PLUGINS_CONFIG = {
     name = "Claude Code",
     icon = "",
     file = "claude-code.lua",
+    repo = "coder/claudecode.nvim",
     category = "Claude",
   },
 
@@ -178,12 +187,14 @@ local PLUGINS_CONFIG = {
     name = "Markdown View",
     icon = "",
     file = "markview.lua",
+    repo = "OXY2DEV/markview.nvim",
     category = "UI",
   },
   markdownRender = {
     name = "Markdown Render",
     icon = "",
-    file = "render-markdown.nvim",
+    file = "render-markdown.lua",
+    repo = "MeanderingProgrammer/render-markdown.nvim",
     category = "UI",
   },
   snacks = {
@@ -196,7 +207,7 @@ local PLUGINS_CONFIG = {
   smear_cursor = {
     name = "Smear Cursor",
     icon = "󱄧",
-    file = "smear-cursor.lua",
+    file = "smear.lua",
     repo = "sphamba/smear-cursor.nvim",
     category = "UI",
   },
@@ -204,6 +215,7 @@ local PLUGINS_CONFIG = {
     name = "Precognition",
     icon = "󰗹",
     file = "precognition.lua",
+    repo = "tris203/precognition.nvim",
     category = "UI",
   },
 
@@ -212,12 +224,14 @@ local PLUGINS_CONFIG = {
     name = "Discord Presence",
     icon = "󰙯",
     file = "presence.lua",
+    repo = "andweeb/presence.nvim",
     category = "Discord",
   },
   cord = {
     name = "Cord",
     icon = "󰙯",
     file = "cord.lua",
+    repo = "vyfor/cord.nvim",
     category = "Discord",
   },
 
@@ -233,6 +247,7 @@ local PLUGINS_CONFIG = {
     name = "MCPHUB",
     icon = "",
     file = "mcphub-nvim.lua",
+    repo = "ravitemer/mcphub.nvim",
     category = "Productivity",
   },
   obsidian = {
@@ -255,8 +270,59 @@ local function get_disabled_lua_path()
   return vim.fn.stdpath("config") .. "/lua/plugins/disabled.lua"
 end
 
--- ⭐ NUEVA FUNCIÓN: Sincronizar disabled.lua en tiempo real
--- Busca en disabled.lua y actualiza el field "enabled = true/false"
+-- Devuelve el índice de la primera línea `enabled = ...` en las 30 líneas desde `start`.
+-- Si esa línea está COMENTADA (entrada inactiva en disabled.lua) devuelve nil,
+-- para que el toggle caiga al sistema de archivos (plugins/ ↔ disabled/).
+local function find_enabled_line(content, start)
+  for j = start, math.min(start + 30, #content) do
+    if content[j]:match("enabled%s*=%s*[a-z]+") then
+      if content[j]:match("^%s*%-%-") then
+        return nil
+      end
+      return j
+    end
+  end
+  return nil
+end
+
+--- Resuelve alias: entradas que comparten plugin/archivo (copilot_nes → copilot).
+---@param plugin_key string
+---@return string
+local function resolve_key(plugin_key)
+  local config = PLUGINS_CONFIG[plugin_key]
+  return (config and config.alias) or plugin_key
+end
+
+--- Índices de las entradas ACTIVAS (`enabled = ...` sin comentar) del plugin en disabled.lua.
+--- Coincide solo contra la parte de código de cada línea (sin comentarios), para no
+--- confundir p. ej. "Codeium" con el comentario `-- Codeium: 2/10` de otra entrada.
+--- Si hay entradas duplicadas (render-markdown aparece 2 veces) devuelve todas.
+---@param content string[] Líneas de disabled.lua
+---@param config table Entrada de PLUGINS_CONFIG
+---@return integer[] Índices de las líneas `enabled = ...`
+local function find_enabled_lines(content, config)
+  local found = {}
+  for idx, line in ipairs(content) do
+    local code = line:gsub("%-%-.*$", "")
+    local hit
+    if config.repo then
+      hit = code:find('"' .. config.repo .. '"', 1, true)
+    else
+      hit = code:find(config.name, 1, true) or code:find(config.file, 1, true)
+    end
+    if hit then
+      local j = find_enabled_line(content, idx)
+      if j then
+        table.insert(found, j)
+      end
+    end
+  end
+  return found
+end
+
+-- ⭐ Sincronizar disabled.lua en tiempo real: reescribe "enabled = true/false"
+-- en TODAS las entradas activas del plugin. Devuelve false si no tiene ninguna
+-- (→ move_plugin() gestiona por archivo: plugins/ ↔ plugins/disabled/).
 local function update_disabled_config(plugin_key, should_disable)
   local config = PLUGINS_CONFIG[plugin_key]
   if not config then
@@ -264,65 +330,38 @@ local function update_disabled_config(plugin_key, should_disable)
   end
 
   local disabled_file = get_disabled_lua_path()
-
   if vim.fn.filereadable(disabled_file) == 0 then
     vim.notify("❌ disabled.lua no encontrado en " .. disabled_file, vim.log.levels.ERROR)
     return false
   end
 
   local content = vim.fn.readfile(disabled_file)
-  local modified = false
-  local plugin_found = false
-  local i = 1
-
-  -- Función auxiliar para encontrar la línea del plugin
-  local function find_plugin_line()
-    for idx, line in ipairs(content) do
-      -- Primero intentar con repo exacto (si existe)
-      if config.repo and line:find(config.repo, 1, true) then
-        return idx
-      end
-      -- Fallback: buscar por nombre o archivo (mantener compatibilidad)
-      if not config.repo then
-        local name_match = line:find(config.name, 1, true)
-        local file_match = line:find(config.file, 1, true)
-        if name_match or file_match then
-          return idx
-        end
-      end
-    end
-    return nil
-  end
-
-  i = find_plugin_line()
-  if not i then
-    -- No tiene entrada en disabled.lua → se gestiona por sistema de
-    -- archivos (mover el .lua entre plugins/ y plugins/disabled/). No emitimos
-    -- aviso aquí: move_plugin() hará el fallback y ya notifica su propio
-    -- "Activado/Desactivado". Evita la falsa alarma del toggle por archivo.
+  local lines = find_enabled_lines(content, config)
+  if #lines == 0 then
     return false
   end
 
-  -- Busca la línea "enabled = true/false" en los siguientes 15 líneas
-  local modified = false
-  for j = i, math.min(i + 30, #content) do
-    if content[j]:match("enabled%s*=%s*[a-z]+") then
-      local old_line = content[j]
-      local new_line = old_line:gsub("enabled%s*=%s*[a-z]+", "enabled = " .. (should_disable and "false" or "true"))
-
-      if new_line ~= old_line then
-        content[j] = new_line
-        modified = true
-        break
-      end
+  local value = "enabled = " .. (should_disable and "false" or "true")
+  local changed = false
+  for _, j in ipairs(lines) do
+    local new_line = content[j]:gsub("enabled%s*=%s*[a-z]+", value)
+    if new_line ~= content[j] then
+      content[j] = new_line
+      changed = true
     end
   end
-
-  if modified then
+  if changed then
     vim.fn.writefile(content, disabled_file)
   end
+  return true
+end
 
-  return modified
+--- ¿El spec del plugin está en plugins/disabled/ (y no en plugins/)? → lazy no lo carga.
+---@param config table Entrada de PLUGINS_CONFIG
+---@return boolean
+local function spec_stuck_in_disabled(config)
+  return vim.fn.filereadable(get_disabled_path() .. "/" .. config.file) == 1
+    and vim.fn.filereadable(get_plugins_path() .. "/" .. config.file) == 0
 end
 
 -- Move plugin file between lua/plugins/ and lua/plugins/disabled/
@@ -333,64 +372,60 @@ local function move_plugin(plugin_key, to_disabled)
     return false
   end
 
-  -- Primero intentar sincronizar con disabled.lua
-  if update_disabled_config(plugin_key, to_disabled) then
-    local status = to_disabled and "❌ Desactivado" or "✅ Activado"
-    vim.notify(
-      status
-        .. ": "
-        .. config.icon
-        .. " "
-        .. config.name
-        .. "\n\n💾 disabled.lua actualizado\n🔄 Reinicia Neovim (o :e lua/plugins/disabled.lua)",
-      vim.log.levels.INFO
-    )
-    return true
-  end
+  -- Toggle SIMÉTRICO, las dos vías a la par (cada una solo si aplica):
+  --   1) disabled.lua: `enabled = true/false` si el plugin tiene entrada activa.
+  --   2) archivo: mover el .lua entre plugins/ ↔ plugins/disabled/ si existe en el origen.
+  local managed = update_disabled_config(plugin_key, to_disabled)
 
-  -- Fallback: usar sistema de archivos (para plugins sin entrada en disabled.lua)
   local from_dir = to_disabled and get_plugins_path() or get_disabled_path()
   local to_dir = to_disabled and get_disabled_path() or get_plugins_path()
-
   local from_file = from_dir .. "/" .. config.file
   local to_file = to_dir .. "/" .. config.file
 
-  -- Verificar que el archivo origen existe
-  if vim.fn.filereadable(from_file) ~= 1 then
+  local moved, move_failed = false, false
+  if vim.fn.filereadable(from_file) == 1 then
+    vim.fn.mkdir(to_dir, "p")
+    moved = vim.fn.rename(from_file, to_file) == 0
+    move_failed = not moved
+  end
+
+  if move_failed then
+    vim.notify("❌ Error moviendo " .. config.name, vim.log.levels.ERROR)
+    return false
+  end
+
+  if not managed and not moved then
     vim.notify(
-      "⚠️  "
-        .. config.icon
-        .. " "
-        .. config.name
-        .. " — Ya está "
-        .. (to_disabled and "desactivado" or "activado")
-        .. " (gestionado por disabled.lua)",
+      "⚠️  " .. config.icon .. " " .. config.name .. " — Ya está " .. (to_disabled and "desactivado" or "activado"),
       vim.log.levels.INFO
     )
     return false
   end
 
-  -- Crear directorio destino si no existe
-  vim.fn.mkdir(to_dir, "p")
-
-  -- Mover archivo
-  local success = vim.fn.rename(from_file, to_file) == 0
-
-  if success then
-    local status = to_disabled and "❌ Desactivado" or "✅ Activado"
-    vim.notify(
-      status .. ": " .. config.icon .. " " .. config.name .. "\n\n🔄 Reinicia Neovim para aplicar cambios",
-      vim.log.levels.WARN
-    )
-    return true
-  else
-    vim.notify("❌ Error moviendo " .. config.name, vim.log.levels.ERROR)
-    return false
+  local detail = {}
+  if managed then
+    table.insert(detail, "💾 disabled.lua → enabled = " .. tostring(not to_disabled))
   end
+  if moved then
+    table.insert(detail, "📁 " .. config.file .. " → " .. (to_disabled and "plugins/disabled/" or "plugins/"))
+  end
+  vim.notify(
+    (to_disabled and "❌ Desactivado" or "✅ Activado")
+      .. ": "
+      .. config.icon
+      .. " "
+      .. config.name
+      .. "\n\n"
+      .. table.concat(detail, "\n")
+      .. "\n🔄 Reinicia Neovim para aplicar cambios",
+    vim.log.levels.WARN
+  )
+  return true
 end
 
 -- Comprobar si un plugin está desactivado (en disabled.lua o en la carpeta disabled/)
 local function is_plugin_disabled(plugin_key)
+  plugin_key = resolve_key(plugin_key)
   local config = PLUGINS_CONFIG[plugin_key]
   if not config then
     return false
@@ -400,36 +435,15 @@ local function is_plugin_disabled(plugin_key)
   local disabled_file = get_disabled_lua_path()
   if vim.fn.filereadable(disabled_file) == 1 then
     local content = vim.fn.readfile(disabled_file)
-
-    -- Función auxiliar para encontrar la línea del plugin
-    local function find_plugin_line()
-      for idx, line in ipairs(content) do
-        -- Primero intentar con repo exacto (si existe)
-        if config.repo and line:find(config.repo, 1, true) then
-          return idx
-        end
-        -- Fallback: buscar por nombre o archivo (mantener compatibilidad)
-        if not config.repo then
-          local name_match = line:find(config.name, 1, true)
-          local file_match = line:find(config.file, 1, true)
-          if name_match or file_match then
-            return idx
-          end
-        end
-      end
-      return nil
-    end
-
-    local i = find_plugin_line()
-    if i then
-      -- Buscar "enabled = true/false" en los siguientes 30 líneas
-      for j = i, math.min(i + 30, #content) do
+    local lines = find_enabled_lines(content, config)
+    if #lines > 0 then
+      for _, j in ipairs(lines) do
         if content[j]:match("enabled%s*=%s*false") then
-          return true -- Plugin está desactivado
-        elseif content[j]:match("enabled%s*=%s*true") then
-          return false -- Plugin está activado
+          return true
         end
       end
+      -- `enabled = true` pero el spec atrapado en disabled/ = cargado sin config → off
+      return spec_stuck_in_disabled(config)
     end
   end
 
@@ -568,12 +582,20 @@ end
 
 -- ⭐ FUNCIÓN PÚBLICA: Toggle plugin
 function M.toggle_plugin(plugin_key)
+  local config = PLUGINS_CONFIG[plugin_key]
+  if config and config.virtual then
+    -- Entrada virtual (avante_mode): abre el selector de modo, no mueve archivos
+    M.avante_mode_picker()
+    return
+  end
+  plugin_key = resolve_key(plugin_key)
   local is_disabled = is_plugin_disabled(plugin_key)
   move_plugin(plugin_key, not is_disabled)
 end
 
 -- ⭐ FUNCIÓN PÚBLICA: Deshabilitar plugin
 function M.disable_plugin(plugin_key)
+  plugin_key = resolve_key(plugin_key)
   if not is_plugin_disabled(plugin_key) then
     move_plugin(plugin_key, true)
   else
@@ -583,6 +605,7 @@ end
 
 -- ⭐ FUNCIÓN PÚBLICA: Habilitar plugin
 function M.enable_plugin(plugin_key)
+  plugin_key = resolve_key(plugin_key)
   if is_plugin_disabled(plugin_key) then
     move_plugin(plugin_key, false)
   else
@@ -818,36 +841,45 @@ local function avante_active_file()
   return active, true -- asume activo si no existe en ningún lado
 end
 
--- Estado actual: { enabled, provider, auth_type }
+--- Índice del PRIMER `provider =` no comentado (top-level de opts). Los siguientes
+--- son file_selector.provider / windows.input.provider (= "snacks") y NO se tocan.
+---@param content string[]
+---@return integer|nil
+local function avante_provider_line(content)
+  for i, line in ipairs(content) do
+    if not line:match("^%s*%-%-") and line:match("^%s*provider%s*=") then
+      return i
+    end
+  end
+  return nil
+end
+
+--- Estado actual leído del ARCHIVO (no de la config runtime: esa no refleja un
+--- preset recién escrito hasta reiniciar, y hacer require() cargaría Avante).
+---@return table { enabled, provider, auth_type }
+---@return string Ruta del spec
 local function avante_current()
-  local file, enabled = avante_active_file()
+  local file = avante_active_file()
   local provider, auth_type = "opencode", "api"
-  
-  -- Intentar obtener la config runtime de Avante (más confiable que parsear el archivo)
-  local ok, cfg = pcall(require, "avante.config")
-  if ok and cfg then
-    provider = cfg.provider or provider
-    auth_type = cfg.auth_type or auth_type
-  else
-    -- Fallback: parsear el archivo (evitando secciones windows/input/ask)
-    local in_windows_section = false
-    for _, line in ipairs(vim.fn.readfile(file)) do
-      if not line:match("^%s*%-%-") then
-        if line:match("windows%s*=") or line:match("input%s*=") or line:match("ask%s*=") then
-          in_windows_section = true
-        elseif line:match("^%s*}") and in_windows_section then
-          in_windows_section = false
-        elseif not in_windows_section then
-          local p = line:match('provider%s*=%s*"([^"]+)"')
-          if p then provider = p end
-          local a = line:match('auth_type%s*=%s*"([^"]+)"')
-          if a then auth_type = a end
-        end
+
+  if vim.fn.filereadable(file) == 1 then
+    local content = vim.fn.readfile(file)
+    local i = avante_provider_line(content)
+    if i then
+      -- provider = (function() ... end)() → auto-detección en runtime
+      provider = content[i]:match('provider%s*=%s*"([^"]+)"') or "auto"
+    end
+    for _, line in ipairs(content) do
+      local a = not line:match("^%s*%-%-") and line:match('^%s*auth_type%s*=%s*"([^"]+)"')
+      if a then
+        auth_type = a
+        break
       end
     end
   end
-  
-  return { enabled = enabled, provider = provider, auth_type = auth_type }, file
+
+  -- enabled real = spec en plugins/ Y no `enabled = false` en disabled.lua
+  return { enabled = not is_plugin_disabled("avante"), provider = provider, auth_type = auth_type }, file
 end
 
 -- Reescribe provider/auth_type en el archivo activo de avante.
@@ -860,33 +892,57 @@ local function avante_apply(mode)
   if not cur.enabled then
     move_plugin("avante", false)
   end
-  local f, _ = avante_active_file()
+  local f = avante_active_file()
   if vim.fn.filereadable(f) ~= 1 then
     vim.notify("⚠️ avante-cursor.lua no encontrado", vim.log.levels.ERROR)
     return false
   end
   local content = vim.fn.readfile(f)
   local changed = false
-  for i, line in ipairs(content) do
-    -- Caso 1: provider = "string"
+  local new_provider = ('provider = "%s"'):format(preset.provider)
+
+  local p = avante_provider_line(content)
+  if p then
+    local line = content[p]
     if line:match('^%s*provider%s*=%s*"[^"]*"') then
-      if not line:find(('provider = "%s"'):format(preset.provider), 1, true) then
-        content[i] = line:gsub('provider%s*=%s*"[^"]*"', ('provider = "%s"'):format(preset.provider))
+      -- Caso 1: provider = "string"
+      if not line:find(new_provider, 1, true) then
+        content[p] = line:gsub('provider%s*=%s*"[^"]*"', new_provider)
         changed = true
       end
-    -- Caso 2: provider = (function() ... end)()  -- auto-detect function
-    elseif line:match('^%s*provider%s*=%s*%s*%(') then
-      -- Reemplazar toda la función por el string del provider
-      local indent = line:match('^(%s*)')
-      content[i] = indent .. ('provider = "%s",'):format(preset.provider)
+    elseif line:match("^%s*provider%s*=%s*%(") then
+      -- Caso 2: provider = (function() ... end)() multilínea → reemplazar el
+      -- bloque COMPLETO hasta su `end)()` con la misma indentación.
+      local indent = line:match("^(%s*)")
+      local last = line:match("end%)%(%)") and p or nil
+      for k = p + 1, last and 0 or #content do
+        if content[k]:match("^" .. indent .. "end%)%(%)") then
+          last = k
+          break
+        end
+      end
+      if not last then
+        vim.notify("❌ No se encontró el cierre `end)()` del provider en " .. AVANTE_FILE, vim.log.levels.ERROR)
+        return false
+      end
+      for _ = p + 1, last do
+        table.remove(content, p + 1)
+      end
+      content[p] = indent .. new_provider .. ","
       changed = true
-    elseif preset.auth_type and line:match('^%s*auth_type%s*=%s*"[^"]*"') then
-      if not line:find(('auth_type = "%s"'):format(preset.auth_type), 1, true) then
-        content[i] = line:gsub('auth_type%s*=%s*"[^"]*"', ('auth_type = "%s"'):format(preset.auth_type))
+    end
+  end
+
+  if preset.auth_type then
+    local new_auth = ('auth_type = "%s"'):format(preset.auth_type)
+    for i, line in ipairs(content) do
+      if not line:match("^%s*%-%-") and line:match('^%s*auth_type%s*=%s*"[^"]*"') and not line:find(new_auth, 1, true) then
+        content[i] = line:gsub('auth_type%s*=%s*"[^"]*"', new_auth)
         changed = true
       end
     end
   end
+
   if changed then
     vim.fn.writefile(content, f)
   end
@@ -937,19 +993,7 @@ function M.avante_mode_picker()
   end)
 end
 
--- ⭐ FUNCIÓN PÚBLICA: Obtener estado de un plugin
-function M.is_disabled(plugin_key)
-  return is_plugin_disabled(plugin_key)
-end
-
--- ⭐ FUNCIÓN PÚBLICA: Obtener config de un plugin
-function M.get_plugin_config(plugin_key)
-  return PLUGINS_CONFIG[plugin_key]
-end
-
--- ⭐ FUNCIÓN PÚBLICA: Avante presets
-M.preset_avante = M.preset_avante
-M.avante_mode_picker = M.avante_mode_picker
+-- ⭐ FUNCIÓN PÚBLICA: estado actual de Avante (provider/auth_type)
 M.avante_current = avante_current
 
 return M

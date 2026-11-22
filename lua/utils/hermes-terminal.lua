@@ -55,6 +55,17 @@ local function current_tab_window_for(buf)
   end
 end
 
+---Find any visible window displaying a buffer, across all tabs.
+---@param buf integer
+---@return integer?
+local function visible_window_for(buf)
+  for _, win in ipairs(vim.fn.win_findbuf(buf)) do
+    if vim.api.nvim_win_is_valid(win) then
+      return win
+    end
+  end
+end
+
 ---Check if a Hermes profile has VPS/hostinger configuration.
 ---@param profile_name string
 ---@return boolean
@@ -76,7 +87,7 @@ local function profile_has_vps_config(profile_name)
   return M.profile_has_vps_config(profile_name)
 end
 
----Smart toggle: focus existing session or start new one with profile (no --continue if fresh).
+---Toggle a profile's TUI window, reopening its live buffer instead of spawning a duplicate.
 ---@param profile_name string
 ---@return table?
 function M.smart_toggle_profile(profile_name)
@@ -88,10 +99,39 @@ function M.smart_toggle_profile(profile_name)
   local root = M.project_root()
   local previous = terminals[root]
   local previous_buf = previous and previous.buf or nil
-  local win = previous_buf and current_tab_window_for(previous_buf) or nil
+  local win = previous_buf and visible_window_for(previous_buf) or nil
+  local previous_profile = previous and previous.profile or "default"
   local previous_source_buf
-
   local has_live_session = terminal_is_live(previous)
+
+  -- A visible Hermes terminal always toggles off, regardless of selected profile.
+  if has_live_session and win then
+    local win_tab = vim.api.nvim_win_get_tabpage(win)
+    if #vim.api.nvim_tabpage_list_wins(win_tab) > 1 then
+      vim.api.nvim_win_hide(win)
+    elseif previous.previous_buf and vim.api.nvim_buf_is_valid(previous.previous_buf) then
+      vim.api.nvim_win_set_buf(win, previous.previous_buf)
+    else
+      vim.api.nvim_win_set_buf(win, vim.api.nvim_create_buf(true, false))
+    end
+    return previous
+  end
+
+  -- Reopen the same profile's existing terminal instead of spawning another.
+  if has_live_session and previous_profile == profile_name then
+    local source_win = vim.api.nvim_get_current_win()
+    previous_source_buf = previous.previous_buf
+    if not previous_source_buf or not vim.api.nvim_buf_is_valid(previous_source_buf) then
+      previous_source_buf = vim.api.nvim_win_get_buf(source_win)
+      previous.previous_buf = previous_source_buf
+    end
+    vim.cmd("botright vsplit")
+    win = vim.api.nvim_get_current_win()
+    vim.api.nvim_win_set_width(win, math.max(30, math.floor(vim.o.columns * terminal_width)))
+    vim.api.nvim_win_set_buf(win, previous_buf)
+    vim.cmd.startinsert()
+    return previous
+  end
 
   if win then
     previous_source_buf = previous.previous_buf
@@ -111,7 +151,7 @@ function M.smart_toggle_profile(profile_name)
   vim.api.nvim_set_current_win(win)
 
   local args = { binary, "--tui", "-p", profile_name }
-  if has_live_session then
+  if has_live_session and previous_profile == profile_name then
     table.insert(args, 3, "--continue")
   end
   local job = vim.fn.termopen(args, { cwd = root })
@@ -126,6 +166,7 @@ function M.smart_toggle_profile(profile_name)
     buf = buf,
     job = job,
     previous_buf = previous_source_buf,
+    profile = profile_name,
   }
   terminals[root] = entry
 
@@ -137,9 +178,8 @@ function M.smart_toggle_profile(profile_name)
   return entry
 end
 
----Smart toggle: focus existing session or start new one.
---- Detects VPS config and shows profile selector only when VPS exists.
---- Acts as a true toggle: hides window if focused, otherwise shows/focuses.
+---Toggle the default/root Hermes TUI window and reuse its live buffer when reopened.
+---The keymap shows a VPS selector only when VPS config exists.
 ---@return table?
 function M.smart_toggle()
   local binary = hermes_binary()
@@ -150,34 +190,27 @@ function M.smart_toggle()
   local root = M.project_root()
   local previous = terminals[root]
   local previous_buf = previous and previous.buf or nil
-  local win = previous_buf and current_tab_window_for(previous_buf) or nil
+  local previous_profile = previous and previous.profile or "default"
+  local win = previous_buf and visible_window_for(previous_buf) or nil
 
   local has_live_session = terminal_is_live(previous)
 
-  -- TRUE TOGGLE: if window exists and is currently focused -> HIDE it
+  -- Any visible Hermes window means toggle off, whether focused or in another tab.
   if has_live_session and win then
-    local current_win = vim.api.nvim_get_current_win()
-    if current_win == win then
-      -- Hide the window (toggle off)
-      if #vim.api.nvim_tabpage_list_wins(vim.api.nvim_get_current_tabpage()) > 1 then
-        vim.api.nvim_win_hide(win)
-      elseif previous.previous_buf and vim.api.nvim_buf_is_valid(previous.previous_buf) then
-        vim.api.nvim_win_set_buf(win, previous.previous_buf)
-      else
-        vim.api.nvim_win_set_buf(win, vim.api.nvim_create_buf(true, false))
-      end
-      return previous
+    local win_tab = vim.api.nvim_win_get_tabpage(win)
+    if #vim.api.nvim_tabpage_list_wins(win_tab) > 1 then
+      vim.api.nvim_win_hide(win)
+    elseif previous.previous_buf and vim.api.nvim_buf_is_valid(previous.previous_buf) then
+      vim.api.nvim_win_set_buf(win, previous.previous_buf)
     else
-      -- Window exists but not focused -> focus it (toggle on)
-      vim.api.nvim_set_current_win(win)
-      vim.cmd.startinsert()
-      return previous
+      vim.api.nvim_win_set_buf(win, vim.api.nvim_create_buf(true, false))
     end
+    return previous
   end
 
   -- If there's a live session but no window, reuse the buffer in a new split
   local previous_source_buf
-  if has_live_session and previous_buf and vim.api.nvim_buf_is_valid(previous_buf) then
+  if has_live_session and previous_profile == "default" and previous_buf and vim.api.nvim_buf_is_valid(previous_buf) then
     local source_win = vim.api.nvim_get_current_win()
     previous_source_buf = vim.api.nvim_win_get_buf(source_win)
     vim.cmd("botright vsplit")
@@ -199,15 +232,7 @@ function M.smart_toggle()
   vim.api.nvim_win_set_buf(win, buf)
   vim.api.nvim_set_current_win(win)
 
-  -- Decide profile: default (no -p) unless VPS config exists
-  local use_vps = M.profile_has_vps_config("vps")
-  local profile_arg = use_vps and "-p vps" or nil
-
   local args = { binary, "--tui" }
-  if profile_arg then
-    table.insert(args, profile_arg)
-  end
-
   local job = vim.fn.termopen(args, { cwd = root })
   if job <= 0 then
     vim.api.nvim_win_set_buf(win, previous_source_buf)
@@ -220,6 +245,7 @@ function M.smart_toggle()
     buf = buf,
     job = job,
     previous_buf = previous_source_buf,
+    profile = "default",
   }
   terminals[root] = entry
 

@@ -1,6 +1,25 @@
 local M = {}
 
+local TARGET_REL = "lua/cord/internal/activity/workspace.lua"
+
+M.default_dir = function()
+  return vim.fn.stdpath("data") .. "/lazy/cord.nvim"
+end
+
+M.unpatch_cord = function(dir)
+  dir = dir or M.default_dir()
+  if vim.fn.isdirectory(dir .. "/.git") == 0 then
+    return
+  end
+  vim.fn.system({ "git", "-C", dir, "update-index", "--no-assume-unchanged", TARGET_REL })
+  vim.fn.system({ "git", "-C", dir, "checkout", "--", TARGET_REL })
+end
+
 M.patch_cord = function(dir)
+  dir = dir or M.default_dir()
+  if vim.fn.isdirectory(dir) == 0 then
+    return
+  end
   local function read(p)
     return vim.fn.readfile(p)
   end
@@ -18,11 +37,14 @@ M.patch_cord = function(dir)
 
   -- 1) Strip any previously applied patch so lazy updates never fail
   -- on local changes, then reapply (idempotent).
-  vim.fn.system({ "git", "-C", dir, "checkout", "--", "lua/cord/internal/activity/workspace.lua" })
+  M.unpatch_cord(dir)
 
   -- 2) lua/cord/internal/activity/workspace.lua: find_git_repository climbs
   -- parent dirs looking for .git/config (upstream only checks workspace_path)
-  local f = dir .. "/lua/cord/internal/activity/workspace.lua"
+  local f = dir .. "/" .. TARGET_REL
+  if vim.fn.filereadable(f) == 0 then
+    return
+  end
   local lines = read(f)
   if not has_mark(lines) then
     local out = {}
@@ -44,6 +66,11 @@ M.patch_cord = function(dir)
       end
     end
     write(f, out)
+  end
+
+  -- 3) Hide from `git ls-files -d -m` so Lazy's git.status check never fails
+  if vim.fn.isdirectory(dir .. "/.git") == 1 then
+    vim.fn.system({ "git", "-C", dir, "update-index", "--assume-unchanged", TARGET_REL })
   end
 end
 

@@ -66,18 +66,29 @@ return {
   -- Por defecto corre con "--" (stdin) y SIN config -> usa defaults (MD013 a 80, MD060
   -- activo). Eso genera el montón de falsos positivos "Expected: 80" que Diego ve en
   -- Neovim. Le pasamos --config para que use MD013:120 y MD060:false.
+  -- Termux: el wrapper de Mason usa shebang `#!/usr/bin/env node`, que no existe
+  -- (nvim-lint no hereda LD_PRELOAD de termux-exec) -> "ENOENT". Se invoca node
+  -- directamente con el script JS del paquete (mismo fix que avante-cursor.lua).
   {
     "mfussenegger/nvim-lint",
-    opts = {
-      linters = {
-        ["markdownlint-cli2"] = {
-          args = {
-            "--config",
-            vim.fn.stdpath("config") .. "/.markdownlint-cli2.jsonc",
-            "-",
-          },
-        },
-      },
-    },
+    opts = function(_, opts)
+      local args = {
+        "--config",
+        vim.fn.stdpath("config") .. "/.markdownlint-cli2.jsonc",
+        "-",
+      }
+      local linter = { args = args }
+      if vim.env.PREFIX and vim.env.PREFIX:find("com.termux", 1, true) then
+        local bin = vim.fn.stdpath("data") .. "/mason/bin/markdownlint-cli2"
+        local script = vim.uv.fs_realpath(bin)
+        if script then
+          linter.cmd = "node"
+          linter.args = vim.list_extend({ script }, args)
+        end
+      end
+      opts.linters = opts.linters or {}
+      opts.linters["markdownlint-cli2"] = linter
+      return opts
+    end,
   },
 }

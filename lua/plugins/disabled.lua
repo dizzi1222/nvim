@@ -17,6 +17,12 @@ return {
     -- Description: Este plugin ofrece una serie de mejoras y herramientas para optimizar la edición de texto en Neovim.
     "yetone/avante.nvim", -- 8/10 | Codeium: 2/10
     enabled = true, -- Integrado a NVIM, pocos modelos gratis,pero Ollama deepseek-cloud Clave, interfaz god, sugerencias like cursor
+    -- 🆕 [dizzi] Red de seguridad: si el spec quedara en disabled/ con enabled = true,
+    -- avante cargaría sin estas deps → "mega.cmdparse not found". (Va DESPUÉS de
+    -- `enabled` para que plugin-switcher siga encontrando esa línea.)
+    dependencies = {
+      { "ColinKennedy/mega.cmdparse", dependencies = { "ColinKennedy/mega.logging" } },
+    },
   },
   {
     "MeanderingProgrammer/render-markdown.nvim",

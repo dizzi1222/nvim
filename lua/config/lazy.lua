@@ -115,6 +115,11 @@ require("lazy").setup({
   install = { colorscheme = { "tokyonight", "habamax" } }, -- Specify colorschemes to install
   -- No me importan las updates hdp .
   checker = { enabled = false }, -- Automatically check for plugin updates
+  -- 🆕 [dizzi] Sin luarocks/hererocks: ningún plugin necesita rocks reales (solo avante
+  -- pide mega.cmdparse, y va como plugin en avante-cursor.lua/disabled.lua). Con rocks
+  -- activo, si falta una dep lazy compila Lua 5.1 vía hererocks → falla en Bazzite
+  -- (sin readline-devel) y deja avante "Failed". Así, como mucho, sale un require claro.
+  rocks = { enabled = false },
   performance = {
     rtp = {
       -- Disable some runtime path plugins to improve performance
