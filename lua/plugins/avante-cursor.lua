@@ -8,7 +8,7 @@
 --    Prioridad: opencode → claude-code → agy-acp → codex
 --    :AvanteSwitchProvider opencode|claude-code|agy-acp|codex
 --    ✅ opencode:          ~/.local/bin/opencode              → suscripción opencode
---    ⏳ claude-code:       npm i -g claude-agent-acp          → `claude` CLI = Pro/Max
+--    ✅ claude-code:       npm i -g @agentclientprotocol/claude-agent-acp → `claude` CLI = Pro/Max
 --    ✅ agy-acp:           agy acp (Antigravity)              → agy alias
 --    ⏳ codex:             npm i -g codex-acp                 → `codex` CLI = ChatGPT Plus
 --
@@ -57,6 +57,21 @@ return {
     -- Se ejecuta una sola vez al cargar el plugin (defer 2s para no bloquear startup).
     config = function(_, opts)
       require("avante").setup(opts)
+
+      -- 🔇 claude-agent-acp (≥0.109) emite `auth/status_update` y `_auth/status_update`,
+      --    que este avante no conoce → ~6 WARN "Unknown notification method" por sesión.
+      --    Son inofensivos: se ignoran EN ORIGEN (ACPClient). Envolver vim.notify no sirve:
+      --    snacks.notifier (ui.lua) reemplaza vim.notify después y pisa el envoltorio.
+      local acp_ok, ACPClient = pcall(require, "avante.libs.acp_client")
+      if acp_ok and type(ACPClient) == "table" and ACPClient._handle_notification then
+        local handle = ACPClient._handle_notification
+        ACPClient._handle_notification = function(self, id, method, params)
+          if method == "auth/status_update" or method == "_auth/status_update" then
+            return
+          end
+          return handle(self, id, method, params)
+        end
+      end
       -- which-key: registrar después de que avante esté listo
       vim.defer_fn(function()
         local ok, wk = pcall(require, "which-key")
@@ -75,10 +90,11 @@ return {
         local is_termux = vim.fn.isdirectory("/data/data/com.termux") == 1
         local is_windows = vim.fn.has("win32") == 1 or vim.fn.has("win64") == 1
 
-        -- Mapeo: binario npm → comando ACP
+        -- Mapeo: binario → paquete npm OFICIAL (scope @agentclientprotocol).
+        -- ⚠️ `claude-agent-acp` / `codex-acp` SIN scope son forks de terceros: no instalar.
         local acp_tools = {
-          ["claude-agent-acp"] = { cmd = "claude-agent-acp", desc = "Claude Code ACP (Pro/Max)" },
-          ["codex-acp"] = { cmd = "codex-acp", desc = "Codex ACP (ChatGPT Plus/Pro)" },
+          ["claude-agent-acp"] = { pkg = "@agentclientprotocol/claude-agent-acp", desc = "Claude Code ACP (Pro/Max)" },
+          ["codex-acp"] = { pkg = "@agentclientprotocol/codex-acp", desc = "Codex ACP (ChatGPT Plus/Pro)" },
         }
 
         local function npm_global_root()
@@ -94,7 +110,9 @@ return {
           return vim.fn.executable(bin) == 1
         end
 
-        local function install_via_npm(bin)
+        ---@param bin string Binario esperado en PATH
+        ---@param pkg string Paquete npm que lo provee
+        local function install_via_npm(bin, pkg)
           local prefix = npm_global_root()
           local bin_dir = prefix .. "/bin"
           -- asegurar que el bin dir esté en PATH
@@ -103,7 +121,7 @@ return {
             vim.env.PATH = bin_dir .. ":" .. path
           end
           vim.notify("[avante] Instalando " .. bin .. " vía npm global...", vim.log.levels.INFO)
-          local out = vim.fn.system("npm install -g " .. bin .. " 2>&1")
+          local out = vim.fn.system("npm install -g " .. pkg .. " 2>&1")
           if vim.v.shell_error == 0 then
             vim.notify("[avante] ✅ " .. bin .. " instalado en " .. bin_dir, vim.log.levels.INFO)
             return true
@@ -140,7 +158,7 @@ return {
             ", "
           ) .. " → instalando...", vim.log.levels.INFO)
           for _, m in ipairs(missing) do
-            install_via_npm(m.bin)
+            install_via_npm(m.bin, m.info.pkg)
           end
           -- recargar PATH por si se instaló en directorio nuevo
           vim.defer_fn(function()
@@ -380,7 +398,7 @@ return {
         --   1) opencode acp   2) claude-agent-acp   3) agy-acp   4) codex-acp
         --   Si no hay ningún CLI ACP instalado → cae a "claude" (API key / suscripción).
         --   Ver `acp_providers` abajo. Se cambia en caliente con :AvanteSwitchProvider
-        provider = "agy-acp",
+        provider = "claude-code",
         ---@alias Mode "agentic" | "legacy"
         ---@type Mode
         mode = "legacy", -- o/ agentic -- 󰄭 GEMINI, Claude, 󰄬 etc SOPORTAN agentic, OLLAMA NO 󰂭 -- The default mode for interaction. "agentic" uses tools to automatically generate code, "legacy" uses the old planning method to generate code.
@@ -401,18 +419,32 @@ return {
         acp_providers = {
           -- 1) opencode acp
           ["opencode"] = { command = "opencode", args = { "acp" } },
-          -- 2) claude-agent-acp (npm i -g claude-agent-acp) → login de `claude` = Claude Pro/Max.
-          --    Sin ANTHROPIC_API_KEY a propósito, para que use la SUSCRIPCIÓN y no la key.
-          ["claude-code"] = {
-            command = "claude-agent-acp",
-            args = {},
+          -- 2) claude-agent-acp (npm i -g @agentclientprotocol/claude-agent-acp)
+          --    → reutiliza el login del CLI `claude` (Pro/Max). Ruta permitida por Anthropic:
+          --    corre el binario oficial sin modificar. Sin ANTHROPIC_API_KEY a propósito.
+          --    • command = node + index.js: el bin es `#!/usr/bin/env node` y en Termux
+          --      /usr/bin/env no existe (termux-exec/LD_PRELOAD no llega: avante solo pasa PATH+env).
+          --    • CLAUDE_CODE_EXECUTABLE: única var que lee el adaptador (no ACP_PATH_TO_*);
+          --      en Android no hay binario empaquetado del Agent SDK.
+          --    Linux/macOS (PC): bin directo, igual que antes. Termux: node + script.
+          ["claude-code"] = vim.tbl_extend("force", (function()
+            if vim.fn.isdirectory("/data/data/com.termux") == 0 then
+              return { command = "claude-agent-acp", args = {} }
+            end
+            local bin = vim.fn.exepath("claude-agent-acp")
+            if bin == "" then
+              bin = vim.fn.expand("~/.npm-global/bin/claude-agent-acp")
+            end
+            return { command = vim.fn.exepath("node"), args = { vim.fn.resolve(bin) } }
+          end)(), {
             env = {
-              PATH = os.getenv("PATH"),
               HOME = os.getenv("HOME"),
-              ACP_PATH_TO_CLAUDE_CODE_EXECUTABLE = vim.fn.exepath("claude"),
-              ACP_PERMISSION_MODE = "bypassPermissions",
+              TMPDIR = os.getenv("TMPDIR") or "/tmp",
+              PREFIX = os.getenv("PREFIX") or "",
+              LANG = os.getenv("LANG") or "C.UTF-8",
+              CLAUDE_CODE_EXECUTABLE = vim.fn.exepath("claude"),
             },
-          },
+          }),
           -- 3) agy-acp (Antigravity CLI, `agy acp`) → sin API key
           ["agy-acp"] = {
             command = "agy",
@@ -573,7 +605,9 @@ return {
         ---Note: This is an experimental feature and may not work as expected.
         --[==[ ⛔ DUAL_BOOST COMENTADO (usa openrouter que está comentado). Reactivar: borrar --[==[ y ]==]
         dual_boost = {
-          enabled = true,
+          -- OFF: claude (sin ANTHROPIC_API_KEY) y gemini (sin GEMINI_API_KEY) no responden →
+          -- cada pregunta esperaba 60 s y acababa en "Dual boost stream timeout reached".
+          enabled = false,
           first_provider = "claude",  -- provider regular (no ACP)
           second_provider = "gemini", -- provider regular (no ACP)
           prompt = "Combina la respuesta de claude y gemini. Responde en español, tono técnico pero cercano, estilo argentino. Sin explicaciones, solo la respuesta final.",
@@ -605,7 +639,7 @@ return {
         -- File selector configuration
         --- @alias FileSelectorProvider "native" | "fzf" | "mini.pick" | "snacks" | "telescope" | string
         file_selector = {
-          provider = "agy-acp", -- Avoid native provider issues
+          provider = "snacks", -- Avoid native provider issues
           provider_opts = {},
         },
         --  CONFIGURACION NUEVA EXPERIMENTAL!! 🚀 
@@ -650,13 +684,20 @@ return {
             close_from_input = nil, -- e.g., { normal = "<Esc>", insert = "<C-d>" }
           },
           -- 🔄 TOGGLES DE AVANTE (con <Space> como leader en LazyVim)
+          -- ⚠️ Conflictos con claude-code.lua (claudecode.nvim): Claude se queda con
+          --    ac (toggle), ad (diff deny), aC (continue), am (modelo) → Avante se mueve.
           toggle = {
             -- default = "<leader>at", -- Abrir/cerrar sidebar
-            -- debug = "<leader>ad",
-            -- selection = "<leader>aT",
+            debug = "<leader>aX", -- antes ad (Claude: diff deny)
+            selection = "<leader>aT", -- antes aC (Claude: continue)
             -- suggestion = "<leader>aS", -- ✅ Enciende/apaga las AUTO-SUGGESTIONS (usar en proyectos grandes para no gastar tokens Free)
             -- repomap = "<leader>aR",
           },
+          files = {
+            add_current = "<leader>aI", -- antes ac (Claude: toggle)
+            add_all_buffers = "<leader>aB",
+          },
+          select_acp_mode = "<leader>aG", -- antes am (Claude: seleccionar modelo)
         },
         selection = {
           enabled = true,
@@ -675,7 +716,7 @@ return {
             rounded = false,
           },
           input = {
-            provider = "agy-acp", -- ✅ Evita "native input doesn't support concealed"
+            provider = "snacks", -- ✅ Evita "native input doesn't support concealed"
             prefix = "> ",
             height = 8,
           },

@@ -132,6 +132,28 @@ return {
     -- defer_startup: conecta al primer evento UI en vez de al import (igual auto-conecta).
     -- Cord es el UNICO RP activo; presence esta en plugins/disabled/ con enabled=false.
     vim.g.cord_defer_startup = true
+
+    -- Limpiar el patch antes de que Lazy chequee git status / haga checkout,
+    -- y re-aplicarlo automáticamente al terminar update/sync/check/restore.
+    local aug = vim.api.nvim_create_augroup("dizzi_cord_patch_sync", { clear = true })
+    vim.api.nvim_create_autocmd("User", {
+      group = aug,
+      pattern = { "LazyUpdatePre", "LazySyncPre", "LazyRestorePre", "LazyCheckPre" },
+      callback = function()
+        pcall(function()
+          require("dizzi.cord_patch").unpatch_cord()
+        end)
+      end,
+    })
+    vim.api.nvim_create_autocmd("User", {
+      group = aug,
+      pattern = { "LazyUpdate", "LazySync", "LazyRestore", "LazyCheck" },
+      callback = function()
+        pcall(function()
+          require("dizzi.cord_patch").patch_cord()
+        end)
+      end,
+    })
   end,
   opts = function()
     return {
